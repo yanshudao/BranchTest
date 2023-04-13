@@ -26,7 +26,7 @@ public class Constant {
 
 
     /**
-	 * 菜单类型
+	 * 菜单类型11
 	 * 
 	 * @author chenshun
 	 * @email sunlightcs@gmail.com
