@@ -1,0 +1,347 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.zd.dao.ZdMajorCourseResourceDao">
+
+    <!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.zd.entity.ZdMajorCourseResourceEntity" id="zdMajorCourseResourceMap">
+        <result property="id" column="id_"/>
+        <result property="semesterCode" column="semester_code"/>
+        <result property="majorCode" column="major_code"/>
+        <result property="majorType" column="major_type"/>
+        <result property="studentType" column="student_type"/>
+        <result property="courseCode" column="course_code"/>
+        <result property="resourceCode" column="resource_code"/>
+        <result property="moduleType" column="module_type"/>
+        <result property="ruleNumber" column="rule_number"/>
+        <result property="subjectType" column="subject_type"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="oldResourceCode" column="old_resource_code"/>
+    </resultMap>
+    <resultMap id="orgZdVOMap" type="io.renren.modules.zd.vo.OrgZdVO">
+        <result property="majorType" column="major_type"/>
+        <result property="studentType" column="student_type"/>
+    </resultMap>
+    <select id="selectOrgZdGroup" resultMap="orgZdVOMap">
+     SELECT om.major_type,om.student_type
+     FROM zd_major_org om
+		WHERE 1=1
+		AND (om.to_org_code=#{params.orgCode}
+		OR FIND_IN_SET(om.to_org_code,#{params.parentOrgCodes}))
+		and om.semester_code=#{params.semesterCode}
+		AND NOT EXISTS(
+        SELECT id FROM zd_major_org_disable zmo
+        WHERE 1=1
+        AND  zmo.student_type=om.student_type
+        AND zmo.major_type=om.major_type
+        AND zmo.subject_type=om.subject_type
+        AND om.major_code=zmo.major_code
+        and zmo.semester_code=om.semester_code
+        AND (zmo.to_org_code=#{params.orgCode}  OR FIND_IN_SET(zmo.to_org_code,#{params.parentOrgCodes}))
+        )
+        AND EXISTS(
+        SELECT id FROM zd_major_course_resource zmcr
+        WHERE 1=1
+        AND zmcr.`semester_code`=om.`semester_code`
+        AND zmcr.subject_type=om.subject_type
+        AND zmcr.student_type=om.student_type
+        AND zmcr.major_type=om.major_type
+        AND zmcr.major_code=om.major_code
+        AND (zmcr.org_code=#{params.orgCode} OR FIND_IN_SET(zmcr.org_code,#{params.parentOrgCodes}))
+        GROUP BY zmcr.major_code,zmcr.student_type,zmcr.major_type,zmcr.`subject_type`
+        )
+		GROUP BY  om.major_type,om.student_type
+    </select>
+    <resultMap type="io.renren.modules.zd.vo.OrgZdMajorVO" id="orgZdMajorVOMap">
+        <result property="id" column="id_"/>
+        <result property="orgCode" column="org_code"/>
+        <!--<result property="majorId" column="major_id"/>-->
+        <result property="majorName" column="major_name"/>
+        <result property="majorCode" column="major_code"/>
+        <result property="studentType" column="student_type"/>
+        <result property="majorType" column="major_type"/>
+        <result property="semesterCode" column="semester_code"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="enable" column="enable_"/>
+        <result property="remark" column="remark_"/>
+    </resultMap>
+    <select id="selectOrgZdMajorMap" resultMap="orgZdMajorVOMap">
+        SELECT a.major_code,m.major_name,m.id_ majorId,
+        COUNT(0)course_count FROM zd_major_org a
+        left join subject_major_base m on m.major_code=a.major_code
+        WHERE 1=1
+        AND  a.student_type=#{params.studentType} AND a.major_type=#{params.majorType}
+        AND (a.org_code=#{params.orgCode}  OR FIND_IN_SET(a.org_code,#{params.parentOrgCodes}))
+        AND  a.semester_code=#{params.semesterCode}
+        <if test="params.majorName!=null and params.majorName!=''">
+            and  m.major_name like concat('%',#{params.majorName},'%')
+        </if>
+        AND NOT EXISTS(
+        SELECT id FROM zd_major_org_disable zmo
+        WHERE 1=1
+        AND  zmo.student_type=a.student_type
+        AND zmo.major_type=a.major_type
+        AND zmo.subject_type=a.subject_type
+        AND a.major_code=zmo.major_code
+        and zmo.semester_code=a.semester_code
+        AND (zmo.to_org_code=#{params.orgCode}  OR FIND_IN_SET(zmo.to_org_code,#{params.parentOrgCodes}))
+        )
+        AND EXISTS(
+        SELECT id FROM zd_major_course_resource zmcr
+        WHERE 1=1
+        AND zmcr.`semester_code`=a.`semester_code`
+        AND zmcr.subject_type=a.subject_type
+        AND zmcr.student_type=a.student_type
+        AND zmcr.major_type=a.major_type
+        AND zmcr.major_code=a.major_code
+        AND (zmcr.org_code=#{params.orgCode} OR FIND_IN_SET(zmcr.org_code,#{params.parentOrgCodes}))
+        GROUP BY zmcr.major_code,zmcr.student_type,zmcr.major_type,zmcr.`subject_type`
+        )
+        GROUP BY a.major_code
+    </select>
+    <resultMap type="io.renren.modules.zd.vo.MajorCourseOrgVO" id="majorCourseOrgVOMap">
+        <result property="id" column="id_"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="majorId" column="major_id"/>
+        <result property="courseId" column="course_id"/>
+        <result property="semesterCode" column="semester_code"/>
+        <result property="courseName" column="course_name"/>
+        <result property="majorName" column="major_name"/>
+        <result property="courseScope" column="course_scope"/>
+        <result property="courseNature" column="course_nature"/>
+        <result property="courseType" column="course_type"/>
+        <result property="courseCode" column="course_code"/>
+        <result property="majorCode" column="major_code"/>
+        <result property="majorCourseId" column="majorCourseId"/>
+        <result property="resourceCount" column="resource_count"/>
+        <result property="subjectType" column="subject_type"/>
+        <result property="studentType" column="student_Type"/>
+        <result property="majorType" column="major_Type"/>
+        <!--<collection  property="resourceList" select="selectResourceByCourseId" column="{course_id=course_id,org_type=org_type}"  />-->
+    </resultMap>
+    <select id="selectCourseByOrg" resultMap="majorCourseOrgVOMap">
+        SELECT
+        (SELECT major_name FROM subject_major_base m WHERE m.major_code=om.`major_code` LIMIT 1)major_name,
+        c.course_name,
+        om.*,COUNT(0)resource_count
+        FROM zd_major_course_resource om
+        left join subject_course c on c.course_code=om.course_code
+        left join subject_resource r on r.resource_code=om.resource_code
+        WHERE 1=1
+        AND om.major_type=#{params.majorType}
+        AND om.student_type=#{params.studentType}
+        AND om.semester_code=#{params.semesterCode}
+	    AND om.`major_code`=#{params.majorCode}
+        and (r.resource_scope=0 or
+        EXISTS( select * from subject_resource_scope rs
+        left join sys_org o on rs.org_id=o.id_
+        where o.org_code=#{params.orgCode}
+        and rs.resource_id=r.id_))
+        <if test="params.isShow !=null and params.isShow!=''">
+            and r.is_show=#{params.isShow}
+        </if>
+        and om.is_archives=#{params.isArchives}
+	<if test="params.courseName !=null and params.courseName!=''">
+        and (
+        c.course_name like concat('%',#{params.courseName},'%')
+        or c.course_code like concat('%',#{params.courseName},'%')
+        )
+    </if>
+    <if test="params.resourceTypeList!=null and params.resourceTypeList.size()>0">
+        AND r.catalog_id in
+        <foreach collection="params.resourceTypeList" item="item" close=")" open="(" separator=",">
+            #{item.typeId}
+        </foreach>
+
+    </if>
+        and
+        (om.org_code=#{params.orgCode} or find_in_set(om.org_code,#{params.parentOrgCodes}))
+        and exists (
+        select id from zd_major_org zmo
+        where om.major_code=zmo.major_code
+        and om.student_type=zmo.student_type
+        and om.major_type=zmo.major_type
+        and om.subject_type=zmo.subject_type
+        and zmo.org_code=om.org_code
+        and (zmo.to_org_code=#{params.orgCode} or   find_in_set(zmo.to_org_code,#{params.parentOrgCodes}))
+        and zmo.semester_code=#{params.semesterCode}
+        )
+        and not exists(
+        select id from zd_major_course_org zmo
+        where om.major_code=zmo.major_code and om.course_code=zmo.course_code
+        and om.student_type=zmo.student_type and om.major_type=zmo.major_type
+        and om.subject_type=zmo.subject_type
+        and zmo.org_code=om.org_code
+        and (zmo.to_org_code=#{params.orgCode} or find_in_set(zmo.to_org_code,#{params.parentOrgCodes}))
+        and zmo.semester_code=#{params.semesterCode}
+        )
+        GROUP BY om.`course_code`,om.subject_type
+    </select>
+    <resultMap type="io.renren.modules.zd.vo.OrderResourceVO" id="voMap">
+        <result property="id" column="id_"/>
+        <result property="orderId" column="order_id"/>
+        <result property="resourceId" column="resource_id"/>
+        <result property="resourceName" column="resource_name"/>
+        <result property="courseName" column="course_name"/>
+        <result property="resourceType" column="resource_type"/>
+        <result property="orderNum" column="order_num"/>
+        <result property="majorId" column="major_id"/>
+        <result property="courseId" column="course_id"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="orderResourceNo" column="order_resource_no"/>
+        <result property="orgId" column="orgId"/>
+        <result property="itemPrice" column="item_price"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="mayang" column="mayang"/>
+        <result property="shiyang" column="shiyang"/>
+        <result property="enable" column="enable_"/>
+        <result property="remark" column="remark_"/>
+        <result property="resourceCode" column="resource_Code"/>
+        <result property="courseCode" column="course_code"/>
+        <result property="resourceVersion" column="resource_version"/>
+        <result property="isbn" column="isbn"/>
+        <result property="majorName" column="major_name"/>
+        <result property="majorType" column="major_type"/>
+        <result property="majorCode" column="major_code"/>
+        <result property="studentType" column="student_type"/>
+        <result property="price" column="price"/>
+        <result property="zmcrId" column="zmcr_id"/>
+    </resultMap>
+    <select id="selectResourceByOrg" resultMap="voMap">
+
+  SELECT
+         r.resource_name,
+         r.resource_type,r.resource_code,
+        r.resource_version,r.isbn,r.price,r.id_,om.id_ zmcr_id
+        FROM
+        subject_resource r
+        INNER JOIN zd_major_course_resource om ON om.`resource_code`=r.resource_code
+        WHERE 1=1 and om.semester_code=#{params.semesterCode}
+        AND om.major_code=#{params.majorCode}  AND om.course_code=#{params.courseCode}
+      AND om.`student_type`=#{params.studentType} AND om.major_type=#{params.majorType}
+      AND (FIND_IN_SET(om.org_code,#{params.parentOrgCodes}) OR om.org_code=#{params.orgCode})
+      <if test="params.isShow!=null and params.isShow!=''">
+          and r.is_show=#{params.isShow}
+      </if>
+        and om.is_archives=#{params.isArchives}
+        <if test="params.resourceTypeList!=null and params.resourceTypeList.size()>0">
+            and r.catalog_id in
+            <foreach collection="params.resourceTypeList" item="item" close=")" open="(" separator=",">
+                #{item.typeId}
+            </foreach>
+        </if>
+        and (r.resource_scope=0 or
+        EXISTS( select * from subject_resource_scope rs
+        left join sys_org o on rs.org_id=o.id_
+        where o.org_code=#{params.orgCode}
+        and rs.resource_id=r.id_))
+
+    </select>
+    <resultMap id="majorCourseResourceVOMap" type="io.renren.modules.zd.vo.ZdMajorCourseResourceVO" extends="zdMajorCourseResourceMap">
+    <result column="major_name" property="majorName"/>
+    <result column="course_name" property="courseName"/>
+    <result column="resource_name" property="resourceName"/>
+    <result column="org_name" property="orgName"/>
+    <result column="price" property="price"/>
+    <result column="resource_type" property="resourceType"/>
+    </resultMap>
+    <select id="selectListPage" resultMap="majorCourseResourceVOMap">
+
+        select om.*,m.major_name,
+c.course_name,r.price,r.resource_name,o.org_name,r.resource_type,r.price
+ from zd_major_course_resource om
+        left join subject_resource r on r.resource_code=om.resource_code
+        left join subject_course c on c.course_code=om.course_code
+        left join subject_major_base m on m.major_code=om.major_code
+        left join sys_org o on o.org_code=om.org_code
+         where om.semester_code=#{params.semesterCode}
+        <if test="params.ownOrgCode!=null and params.ownOrgCode!=''">
+            AND  om.org_code=#{params.ownOrgCode}
+        </if>
+        <if test="params.parentOrgCode!=null and params.parentOrgCode!=''">
+            AND (find_in_set(om.org_code,#{params.parentOrgCode}) or om.org_code=#{params.orgCode})
+        </if>
+        <if test="params.studentType!=null and params.studentType!=''">
+          and om.student_type=#{params.studentType}
+        </if>
+        <if test="params.majorType!=null and params.majorType!=''">
+            and om.major_type=#{params.majorType}
+        </if>
+        <if test="params.subjectType!=null and params.subjectType!=''">
+            and om.subject_type=#{params.subjectType}
+        </if>
+         <if test="params.isArchives!=null and params.isArchives!=''">
+            and om.is_archives=#{params.isArchives}
+        </if>
+        <if test="params.eqResourceCode!=null and params.eqResourceCode!=''">
+            and r.resource_code=#{params.eqResourceCode}
+        </if>
+        <if test="params.resourceCode!=null and params.resourceCode!=''">
+            and (
+            r.resource_name like concat('%',#{params.resourceCode},'%')
+            or
+            r.resource_code like concat('%',#{params.resourceCode},'%')
+
+            )
+        </if>
+        <if test="params.courseCode!=null and params.courseCode!=''">
+            and (
+            c.course_name like concat('%',#{params.courseCode},'%')
+            or
+            c.course_code like concat('%',#{params.courseCode},'%')
+            )
+        </if>
+        <if test="params.majorCode!=null and params.majorCode!=''">
+            and (
+            m.major_name like concat('%',#{params.majorCode},'%')
+            or
+            m.major_code like concat('%',#{params.majorCode},'%')
+            )
+        </if>
+    </select>
+    <select id="countByMap" resultType="java.lang.Integer">
+        select count(*)
+        from zd_major_course_resource om
+        where 1=1
+        <if test="params.notEqOrgCode!=null and params.notEqOrgCode!=''">
+            and om.org_code!=#{params.notEqOrgCode}
+        </if>
+        <if test="params.ids!=null and params.ids.size()>0">
+            and om.id_ in
+            <foreach collection="params.ids" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+    </select>
+    <select id="selectByUk" resultMap="zdMajorCourseResourceMap">
+        select * from zd_major_course_resource
+        where major_code=#{majorCode} and major_type=#{majorType}
+        and student_type=#{studentType} and course_code=#{courseCode}
+        and subject_type=#{subjectType} and org_code=#{orgCode}
+        and resource_code=#{resourceCode} and semester_code=#{semesterCode}
+    </select>
+    <insert id="selectInsert" >
+        insert ignore into zd_major_course_org(id,semester_code,org_code,major_code,major_type,student_type,course_code,subject_type,opt_type)
+        SELECT CONCAT_WS('-',semester_code,#{orgCode},major_code,
+        course_code,major_type,student_type,subject_type,'add'),
+        semester_code,#{orgCode},major_code,major_type,student_type,course_code,subject_type,'add'
+        FROM zd_major_course_resource
+        WHERE id_ IN
+         <foreach collection="list" separator="," open="(" close=")" item="item">
+             #{item}
+         </foreach>
+        GROUP BY semester_code,org_code,major_code,major_type,student_type,course_code,subject_type
+    </insert>
+
+
+</mapper>

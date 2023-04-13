@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.zd.dao.ZdRefundSupplierResourceDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.zd.entity.ZdRefundSupplierResourceEntity" id="zdRefundSupplierResourceMap">
+        <result property="id" column="id_"/>
+        <result property="refundSupplierId" column="refund_supplier_id"/>
+        <result property="resourceId" column="resource_id"/>
+        <result property="refundNum" column="refund_num"/>
+        <result property="realNum" column="real_num"/>
+        <result property="refundPrice" column="refund_price"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="status" column="status"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="enable" column="enable_"/>
+        <result property="remark" column="remark_"/>
+        <result property="csNum" column="cs_num"/>
+        <result property="nitemdiscountrate" column="nitemdiscountrate"/>
+        <result property="mayang" column="mayang"/>
+        <result property="shiyang" column="shiyang"/>
+    </resultMap>
+    <select id="selectByRefundId" resultMap="zdRefundSupplierResourceMap">
+        select * from zd_refund_supplier_resource where refund_supplier_id=#{refundId}
+    </select>
+    <!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.zd.vo.RefundSupplierResourceVO" extends="zdRefundSupplierResourceMap" id="refundSupplierResourceVOMap">
+        <result property="resourceName" column="resource_name"/>
+        <result property="resourceCode" column="resource_code"/>
+        <result property="resourceVersion" column="resource_version"/>
+        <result property="resourceType" column="resource_type"/>
+        <result property="isbn" column="isbn"/>
+        <result property="supplierId" column="supplier_id"/>
+        <!--<result property="catalogId" column="catalog_id"/>-->
+        <!--<result property="catalogName" column="catalog_name"/>-->
+
+    </resultMap>
+    <!--根據退货单号获取退货的详细信息界面审核界面的子功能-->
+    <select id="queryRefundResourceInfoPage" resultMap="refundSupplierResourceVOMap">
+    SELECT
+        rsr.refund_code,
+        sr.resource_version,
+        sr.resource_name,
+        sr.resource_code,
+        sr.resource_type,
+        sr.isbn,
+        res.*
+    FROM
+        zd_refund_supplier_resource res
+        left join subject_resource sr on  res.resource_id = sr.id_
+        left join zd_refund_supplier rsr on res.refund_supplier_id=rsr.id_
+    WHERE 1=1
+        AND	res.refund_supplier_id = #{params.refundid}
+    </select>
+    <select id="selectByFRefundId" resultMap="zdRefundSupplierResourceMap">
+
+        select * from zd_refund_supplier_resource
+        where foreign_refund_resource_id=#{fRefundResourceId}
+    </select>
+    <select id="queryRefundResourceInfoAll" resultType="io.renren.modules.zd.vo.RefundSupplierResourceVO">
+        SELECT
+        group_concat(rsr.refund_code)refund_code,
+        sr.resource_version,
+        sr.resource_name,
+        sr.resource_code,
+        sr.resource_type,
+        sr.isbn,
+        sum(res.refund_num)refund_num,
+        sum(res.real_num)real_num,
+        sum(res.refund_price)refund_price,
+        sum(res.mayang)mayang,
+        avg(res.nitemdiscountrate)nitemdiscountrate,
+        sum(res.shiyang)shiyang
+        FROM
+        zd_refund_supplier_resource res
+        left join subject_resource sr on  res.resource_id = sr.id_
+        left join zd_refund_supplier rsr on res.refund_supplier_id=rsr.id_
+        WHERE 1=1
+        <if test="params.refundIds!=null and params.refundIds.size()>0">
+            AND	res.refund_supplier_id in
+            <foreach collection="params.refundIds" separator="," open="(" close=")" item="item">
+                #{item}
+            </foreach>
+        </if>
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            AND	rsr.semester_code = #{params.semesterCode}
+        </if>
+        group by res.resource_id
+    </select>
+    <select id="selectRefundResourceLimit" resultType="java.lang.Integer">
+    select (s.total_amount-ifnull(z_cat.total_cat,0))totalCount from zd_stock s
+     LEFT JOIN
+        (
+        SELECT rc.org_code,SUM(rc.cat_num)total_cat,rc.resource_id   FROM zd_refund_cart rc
+
+        GROUP BY rc.org_code,rc.resource_id
+
+        )z_cat ON s.org_code=z_cat.org_code AND s.resource_id=z_cat.resource_id
+
+       where 1=1
+        <if test="resourceId!=null and resourceId!=''">
+            and s.resource_id=#{resourceId}
+        </if>
+        <if test="orgCode!=null and orgCode!=''">
+            and s.org_code=#{orgCode}
+        </if>
+
+    </select>
+    <select id="selectRefundResourceLimit2" resultType="java.lang.Integer">
+    select (s.total_amount-ifnull(z_cat.total_cat,0))totalCount
+    from zd_stock s
+     LEFT JOIN
+        (
+        SELECT rc.org_code,SUM(rc.cat_num)total_cat,rc.resource_id
+        FROM zd_refund_cart rc
+        where rc.refund_semester_code=#{semesterCode}
+        GROUP BY rc.org_code,rc.resource_id
+
+        )z_cat ON s.org_code=z_cat.org_code AND s.resource_id=z_cat.resource_id
+
+       where 1=1
+        <if test="resourceId!=null and resourceId!=''">
+            and s.resource_id=#{resourceId}
+        </if>
+        <if test="orgCode!=null and orgCode!=''">
+            and s.org_code=#{orgCode}
+        </if>
+
+    </select>
+
+</mapper>

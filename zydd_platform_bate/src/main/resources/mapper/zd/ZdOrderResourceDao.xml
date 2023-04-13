@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.zd.dao.ZdOrderResourceDao">
+
+    <!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.zd.entity.ZdOrderResourceEntity" id="zdOrderResourceMap">
+        <result property="id" column="id_"/>
+        <result property="orderId" column="order_id"/>
+        <result property="resourceId" column="resource_id"/>
+        <result property="orderNum" column="order_num"/>
+        <result property="majorId" column="major_id"/>
+        <result property="courseId" column="course_id"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="orderResourceNo" column="order_resource_no"/>
+        <result property="orgId" column="orgId"/>
+        <result property="itemPrice" column="item_price"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="mayang" column="mayang"/>
+        <result property="shiyang" column="shiyang"/>
+        <result property="enable" column="enable_"/>
+        <result property="remark" column="remark_"/>
+    </resultMap>
+    <resultMap type="io.renren.modules.zd.vo.OrderResourceVO" extends="zdOrderResourceMap" id="voMap">
+        <result property="id" column="id_"/>
+        <result property="orderId" column="order_id"/>
+        <result property="resourceId" column="resource_id"/>
+        <result property="resourceName" column="resource_name"/>
+        <result property="courseName" column="course_name"/>
+        <result property="resourceType" column="resource_type"/>
+        <result property="orderNum" column="order_num"/>
+        <result property="majorId" column="major_id"/>
+        <result property="courseId" column="course_id"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="orderResourceNo" column="order_resource_no"/>
+        <result property="orgId" column="orgId"/>
+        <result property="itemPrice" column="item_price"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="mayang" column="mayang"/>
+        <result property="shiyang" column="shiyang"/>
+        <result property="enable" column="enable_"/>
+        <result property="remark" column="remark_"/>
+        <result property="resourceCode" column="resource_Code"/>
+        <result property="courseCode" column="course_code"/>
+        <result property="resourceVersion" column="resource_version"/>
+        <result property="isbn" column="isbn"/>
+        <result property="majorName" column="major_name"/>
+        <result property="majorType" column="major_type"/>
+        <result property="majorCode" column="major_code"/>
+        <result property="studentType" column="student_type"/>
+        <result property="countyCode" column="county_code"/>
+        <result property="provinceCode" column="province_code"/>
+        <result property="provinceName" column="province_name"/>
+        <result property="countyName" column="county_Name"/>
+    </resultMap>
+
+    <select id="selectListPage" resultMap="voMap">
+        select zor.*,
+        r.resource_name,r.resource_type,r.resource_code,mcr.course_code,
+        r.resource_version,r.isbn,
+        (SELECT course_name FROM subject_course c WHERE c.course_code=mcr.course_code)course_name,
+        (SELECT major_name FROM subject_major_base m WHERE m.major_code=mcr.major_code LIMIT 1)major_name,
+        mcr.major_code,mcr.student_type,mcr.major_type
+        from
+        zd_order_resource zor
+        left join zd_major_course_Resource mcr on mcr.id_=zor.zmcr_id
+        left join subject_resource r on mcr.resource_code=r.resource_code
+
+        where 1=1
+        <if test="params.orderId!=null and params.orderId!=''">
+            and zor.order_id=#{params.orderId}
+        </if>
+        <if test="params.orgType!=null and params.orgType!=''">
+            and zor.org_type=#{params.orgType}
+        </if>
+    </select>
+
+    <delete id="deleteByOrderId">
+        delete from zd_order_resource where order_id in
+        <foreach collection="ids" separator="," close=")" open="(" item="item">
+            #{item}
+        </foreach>
+    </delete>
+
+
+    <select id="getOrderResourceByOrgCode" resultMap="zdOrderResourceMap">
+        select A.* from zd_order_resource A,zd_order B
+        <where>
+            <if test="fromOrgCode!=null and fromOrgCode!=''">
+                B.from_org_code = #{fromOrgCode}
+            </if>
+            <if test="toOrgCode!=null and toOrgCode!=''">
+                and B.to_org_code = #{toOrgCode}
+            </if>
+            and A.order_id = B.id_
+        </where>
+
+    </select>
+
+    <resultMap type="io.renren.modules.zd.vo.RefundOrderVO" extends="zdOrderResourceMap" id="refundOrederVo">
+        <result property="totatlnum" column="totalnum"/>
+        <result property="ordernum" column="ordernum"/>
+
+    </resultMap>
+    <!--孔 begin-->
+    <!--獲取退訂相關的報訂總和-->
+    <select id="getRefundOrderInfo" resultMap="refundOrederVo">
+        SELECT
+        zp.semester_code,
+        zpr.resource_id,
+        zpr.order_num,
+        sum(zpr.order_num)as ordernum,
+        (
+        SELECT
+        sum(zpr.order_num)
+        FROM
+        zd_order zp,
+        zd_order_resource zpr
+        WHERE
+        zpr.order_id = zp.id_
+        AND zpr.resource_id = #{params.resourceid}
+        ) as totalnum
+        FROM
+        zd_order zp,
+        zd_order_resource zpr
+        WHERE
+        zpr.order_id = zp.id_
+        AND zpr.resource_id = #{params.resourceid}
+        AND zp.semester_code = #{params.semester_code}
+    </select>
+
+    <!--孔 end-->
+    <!-- add begin -->
+
+
+    <update id="updateVersion">
+    update zd_order_resource a inner join zd_order o on a.order_id=o.id_
+    set a.resource_id=#{newResourceId}
+    where a.resource_id=#{oldResourceId}
+    and o.semester_code=#{semesterCode}
+    and o.to_org_code=#{orgCode}
+    and a.major_od=#{majorId}
+    and a.course_id=#{courseId}
+    </update>
+
+
+
+    <select id="selectAllOrderList" resultMap="voMap">
+        select a.order_no,r.resource_code,if(#{params.orgType}='1',r.resource_name,'-------'),
+        c.course_code,c.course_name,zr.order_num,
+        county_org.org_code county_code,county_org.org_name county_name,
+        province_org.org_name province_name,province_org.org_code province_code        from zd_order a
+        left join zd_order_resource zr   on a.id_=zr.order_id
+        left join subject_course c on c.id_=zr.course_id
+        left join subject_resource r on r.id_=zr.resource_id
+        left join sys_org county_org on county_org.org_code=a.from_org_code
+        left join sys_org province_org on province_org.org_code=a.to_org_code
+        where 1=1
+        <if test="params.fromOrgCode!=null and params.fromOrgCode!=''">
+            and a.from_org_code=#{params.fromOrgCode}
+        </if>
+        <if test="params.status!=null and params.status!=''">
+            and a.status=#{params.status}
+        </if>
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+
+            and a.semester_code=#{params.semesterCode}
+        </if>
+
+    </select>
+    <select id="countByResourceIds" resultType="java.lang.Integer">
+        select count(0) from zd_order_resource where resource_id in
+        <foreach collection="ids" open="(" close=")" separator="," item="item">
+            #{item}
+        </foreach>
+    </select>
+    <select id="countByCourseIds" resultType="java.lang.Integer">
+        select count(0) from zd_order_resource where course_id in
+        <foreach collection="ids" open="(" close=")" separator="," item="item">
+            #{item}
+        </foreach>
+    </select>
+    <select id="selectListPage1" resultMap="voMap">
+        select zor.*,
+        r.resource_name,r.resource_type,r.resource_code,om.course_code,
+        r.resource_version,r.isbn,om.major_code,om.student_type,om.major_type,
+        (SELECT course_name FROM subject_course c WHERE c.course_code=om.course_code)course_name,
+        (SELECT major_name FROM subject_major_base m WHERE m.major_code=om.major_code LIMIT 1)major_name
+        from
+        zd_major_course_resource om
+        left join zd_order_resource zor on om.id_=zor.zmcr_id
+        left join subject_resource r on om.resource_code=r.resource_code
+        where 1=1
+        <if test="params.orderId!=null and params.orderId!=''">
+            and zor.order_id=#{params.orderId}
+        </if>
+        <if test="params.orgType!=null and params.orgType!=''">
+            and zor.org_type=#{params.orgType}
+        </if>
+    </select>
+    <select id="countZMCRIds" resultType="java.lang.Integer">
+
+
+        select count(0) from zd_order_Resource where zmcr_id in
+        <foreach collection="zmcrIds" separator="," close=")" open="(" item="item">
+            #{item}
+        </foreach>
+    </select>
+    <select id="queryOrderSumByIds" resultType="java.lang.Integer">
+        select sum(order_num) from zd_order_Resource
+        where id_ in
+        <foreach collection="ids" item="item" close=")" open="(" separator=",">
+            #{item}
+        </foreach>
+
+    </select>
+    <select id="selectAll" resultMap="voMap">
+        select zor.*,
+        r.resource_name,r.resource_type,r.resource_code,om.course_code,om.subject_type,ifnull(zor.order_num*zor.item_price,0) mayng,
+        r.resource_version,r.isbn,om.major_code,om.student_type,om.major_type,
+        (SELECT course_name FROM subject_course c WHERE c.course_code=om.course_code)course_name,
+        (SELECT major_name FROM subject_major_base m WHERE m.major_code=om.major_code LIMIT 1)major_name
+        ,o.order_no,
+        (SELECT org_name FROM sys_org dept WHERE dept.org_code=o.from_org_code)county_org_name,
+        (SELECT org_name FROM sys_org dept WHERE dept.org_code=o.to_org_code)province_org_name
+        from
+        zd_major_course_resource om
+        left join zd_order_resource zor on om.id_=zor.zmcr_id
+        left join zd_order o on zor.order_id=o.id_
+        left join subject_resource r on om.resource_code=r.resource_code
+        where 1=1
+        and zor.zmcr_id in
+        <foreach collection="searchForm.zmcrList" item="item" close=")" open="(" separator=",">
+            #{item}
+        </foreach>
+        and
+        EXISTS(
+        SELECT * FROM sys_org o
+        WHERE o.`org_code`=zor.org_code
+        AND
+        <foreach collection="searchForm.orgList" item="item" close=")" open="(" separator="or">
+            FIND_IN_SET(#{item},o.`parent_codes`)
+        </foreach>
+
+        )
+        AND not EXISTS (
+        SELECT * FROM zd_source s
+        LEFT JOIN zd_source_order_resource sor ON s.id_=sor.`source_id`
+        WHERE s.`is_sync`=1 AND sor.`order_resource_id`=zor.id_
+        )
+    </select>
+    <update id="updateResourceVersion">
+       update
+        zd_order_resource zor
+        set zor.zmcr_id=#{newZmcrId}
+        where 1=1
+        and zor.zmcr_id=#{oldZmcrId}
+        and
+        EXISTS(
+        SELECT * FROM sys_org o
+        WHERE o.`org_code`=zor.org_code
+        AND
+        <foreach collection="orgList" item="item" close=")" open="(" separator="or">
+            FIND_IN_SET(#{item},o.`parent_codes`)
+        </foreach>
+        )
+        AND NOT EXISTS(SELECT * FROM zd_source s LEFT JOIN zd_source_order_resource sor
+        ON s.id_=sor.`source_id` WHERE s.`is_sync`=1 AND sor.`order_resource_id`=zor.id_)
+
+    </update>
+</mapper>

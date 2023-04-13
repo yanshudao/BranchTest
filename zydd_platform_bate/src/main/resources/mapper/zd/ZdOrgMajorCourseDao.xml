@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.zd.dao.ZdOrgMajorCourseDao">
+
+    <!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.zd.entity.ZdOrgMajorCourseEntity" id="zdOrgMajorCourseMap">
+        <result property="id" column="id_"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="majorId" column="major_id"/>
+        <result property="courseId" column="course_id"/>
+        <result property="semesterCode" column="semester_code"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="enable" column="enable_"/>
+        <result property="remark" column="remark_"/>
+    </resultMap>
+
+    <resultMap type="io.renren.modules.zd.vo.MajorCourseOrgVO" id="majorCourseOrgVOMap">
+        <result property="id" column="id_"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="majorId" column="major_id"/>
+        <result property="courseId" column="course_id"/>
+        <result property="semesterCode" column="semester_code"/>
+        <result property="courseName" column="course_name"/>
+        <result property="majorName" column="major_name"/>
+        <result property="courseScope" column="course_scope"/>
+        <result property="courseNature" column="course_nature"/>
+        <result property="courseType" column="course_type"/>
+        <result property="courseCode" column="course_code"/>
+        <result property="majorCode" column="major_code"/>
+        <result property="majorCourseId" column="majorCourseId"/>
+        <result property="resourceCount" column="resource_count"/>
+        <result property="subjectType" column="subject_type"/>
+        <result property="studentType" column="student_Type"/>
+        <result property="majorType" column="major_Type"/>
+        <!--<collection  property="resourceList" select="selectResourceByCourseId" column="{course_id=course_id,org_type=org_type}"  />-->
+    </resultMap>
+    <resultMap type="io.renren.modules.zd.vo.MajorCourseOrgVO" id="majorCourseOrgVOCollectionMap">
+        <result property="id" column="id_"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="majorId" column="major_id"/>
+        <result property="semesterCode" column="semester_code"/>
+        <result property="courseName" column="course_name"/>
+        <result property="majorName" column="major_name"/>
+        <result property="courseScope" column="course_scope"/>
+        <result property="courseId" column="course_id"/>
+        <result property="orgType" column="org_type"/>
+        <result property="courseNature" column="course_nature"/>
+        <result property="courseType" column="course_type"/>
+        <result property="courseCode" column="course_code"/>
+        <result property="majorCode" column="major_code"/>
+        <result property="majorCourseId" column="majorCourseId"/>
+        <result property="resourceCount" column="resource_count"/>
+        <result property="subjectType" column="subject_type"/>
+        <result property="studentType" column="student_Type"/>
+        <result property="majorType" column="major_Type"/>
+      <!--  <collection  property="resourceList" select="selectResourceByCourseId"
+                     column="{course_id=course_id,org_type=org_type,majorId=major_id,own_org_code=own_org_code,parentOrgCodes=parentOrgCodes,semesterCode=semester_code}"  />-->
+
+
+    </resultMap>
+
+    <select id="selectByList" resultMap="majorCourseOrgVOMap">
+
+        SELECT omc.id_,m.id_ major_id,m.major_name ,m.major_code,c.id_ course_id,
+        c.course_code,c.course_name,m.student_type,m.major_type
+        FROM zd_org_major_course omc
+        LEFT JOIN subject_major_base m ON m.id_=omc.major_id
+        LEFT JOIN subject_course c ON c.id_=omc.course_id
+        WHERE 1=1
+        <if test="params.orgCode!=null and params.orgCode!=''">
+            and omc.org_code=#{params.orgCode}
+        </if>
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            and omc.semester_code=#{params.semesterCode}
+        </if>
+        <if test="params.majorId!=null and params.majorId!=''">
+            and omc.major_id=#{params.majorId}
+        </if>
+
+    </select>
+    <select id="selectListPage" resultMap="majorCourseOrgVOCollectionMap">
+
+        SELECT DISTINCT c.*
+        ,mc.id_ majorCourseId,c.id_ course_id,a.resource_count,
+        m.id_ major_id,m.student_Type,m.major_type,m.major_name,m.major_code,#{params.orgType} as org_type,
+        om.semester_code,#{params.orgCode} as own_org_code,
+        #{params.parentOrgCodes} as parentOrgCodes
+        FROM
+        zd_org_major om
+        LEFT JOIN subject_major_base m ON om.`major_id`=m.id_
+        LEFT JOIN subject_major_course mc ON m.major_code=mc.major_code AND m.student_type=mc.`student_type` AND
+        m.major_type=mc.`major_type`
+        LEFT JOIN subject_course c ON c.course_code=mc.`course_code`
+        INNER JOIN
+        (
+        SELECT course_id,COUNT(0)resource_count
+        FROM subject_course_resource cr
+        INNER JOIN subject_resource r ON cr.resource_id=r.id_
+        INNER JOIN subject_course c ON c.id_=cr.course_id
+        WHERE 1=1 AND
+        r.delete_flag='0'
+        AND
+        NOT EXISTS(
+        SELECT b.resource_id FROM zd_org_course_resource b
+        WHERE 1=1
+        AND b.`major_id`=#{params.majorId} and b.semester_code=#{params.semesterCode}
+        AND b.`resource_id`=cr.resource_id
+        AND b.`course_id`=cr.`course_id` AND
+        (FIND_IN_SET(org_code,#{params.parentOrgCodes}) OR org_code=#{params.orgCode}) )
+        GROUP BY course_id
+        ) a
+        ON a.course_id=c.id_
+        WHERE 1=1
+        AND (FIND_IN_SET(om.org_code,#{params.parentOrgCodes}) OR om.org_code=#{params.orgCode})
+
+        AND NOT EXISTS (
+        SELECT course_id FROM zd_org_major_course
+        WHERE  (FIND_IN_SET(org_code,#{params.parentOrgCodes}) OR org_code=#{params.orgCode})
+        AND major_id=m.id_
+        and course_id=c.id_
+        AND semester_code=#{params.semesterCode}
+        )
+        <if test="params.majorId!=null and params.majorId!=''">
+            AND m.id_=#{params.majorId}
+        </if>
+        <if test="params.courseName!=null and params.courseName!=''">
+            AND
+            ( c.course_name like concat('%',#{params.courseName},'%')
+            or
+            c.course_code like concat('%',#{params.courseName},'%'))
+        </if>
+        GROUP BY c.id_
+        HAVING a.resource_count >0
+
+
+    </select>
+    <select id="selectListAll" resultMap="majorCourseOrgVOMap">
+        SELECT c.*
+
+        ,mc.id_ majorCourseId,a.resource_count
+
+        FROM
+        zd_org_major om
+        LEFT JOIN subject_major_base m ON om.`major_id`=m.id_
+        LEFT JOIN subject_major_course mc ON m.major_code=mc.major_code AND m.student_type=mc.`student_type` AND
+        m.major_type=mc.`major_type`
+        LEFT JOIN subject_course c ON c.course_code=mc.`course_code`
+        INNER JOIN
+        ( SELECT course_id,COUNT(0)resource_count FROM
+        subject_course_resource cr
+        INNER JOIN subject_resource r ON cr.resource_id=r.id_
+        INNER JOIN subject_course c ON c.id_=cr.course_id
+        GROUP BY course_id) a
+        ON a.course_id=c.id_
+        WHERE 1=1  AND (FIND_IN_SET(om.org_code,#{params.parentOrgCodes}) OR om.org_code=#{params.orgCode})
+        <if test="params.majorId!=null and params.majorId!=''">
+            AND m.id_=#{params.majorId}
+        </if>
+
+        GROUP BY c.id_
+        HAVING a.resource_count>0
+
+    </select>
+
+    <select id="selectNotHaveByOrg" resultMap="majorCourseOrgVOMap">
+
+
+        SELECT omc.id_,omc.course_id,omc.major_id,c.course_code,m.major_code,
+        omc.org_code,
+        c.course_name,m.major_name,c.`course_scope`,c.`course_type`,COUNT(cr.`resource_id`)resource_count
+        FROM zd_org_major_course omc
+        LEFT JOIN subject_course c ON c.id_=omc.course_id
+        LEFT JOIN subject_major_base m ON m.id_=omc.major_id
+        LEFT JOIN subject_course_resource cr ON cr.`course_id`=c.id_
+        where 1=1
+        <if test="params.majorId!=null and params.majorId!=''">
+            AND omc.major_id=#{params.majorId}
+        </if>
+        <if test="params.courseName!=null and params.courseName!=''">
+            AND (
+            c.course_name like concat('%',#{params.courseName},'%')
+            or
+            c.course_code like concat('%',#{params.courseName},'%')
+            )
+        </if>
+        <if test="params.parentOrgCode!=null and params.parentOrgCode!=''">
+            AND (find_in_set(omc.org_code,#{params.parentOrgCode}) or omc.org_code=#{params.orgCode})
+        </if>
+
+
+        GROUP BY omc.course_id,omc.major_id
+
+
+    </select>
+    <select id="selectHaveByOrg" resultMap="majorCourseOrgVOMap">
+
+        SELECT m.id_ major_id,c.id_ course_id,mc.major_code,
+        mc.course_code,m.major_name,c.course_name,c.course_type,c.course_scope,
+       ifnull(a.resource_Count,0)resource_Count,mc.org_code,mc.subject_type
+        FROM subject_major_course mc
+        inner JOIN subject_major_base m ON m.major_code=mc.major_code
+        inner JOIN subject_course c ON c.course_code=mc.course_code
+        left JOIN
+        ( SELECT course_id,COUNT(0)resource_count FROM
+        subject_course_resource cr
+        left JOIN subject_resource r ON cr.resource_id=r.id_
+        INNER JOIN subject_course c ON c.id_=cr.course_id
+        where 1=1
+        <if test="params.parentOrgCode!=null and params.parentOrgCode!=''">
+        AND (find_in_set(cr.org_code,#{params.parentOrgCode})or cr.org_code=#{params.orgCode})
+        </if>
+        GROUP BY course_id) a
+        ON a.course_id=c.id_
+        left JOIN subject_course_resource cr ON cr.course_id=c.id_
+        WHERE 1=1
+        <!--<if test="params.semesterCode!=null and params.semesterCode!=''">
+            AND mc.semester_Code=#{params.semesterCode}
+        </if>-->
+        <if test="params.majorId!=null and params.majorId!=''">
+            AND m.id_=#{params.majorId}
+        </if>
+        <if test="params.parentOrgCode!=null and params.parentOrgCode!=''">
+            AND (find_in_set(mc.org_code,#{params.parentOrgCode})or mc.org_code=#{params.orgCode})
+        </if>
+        AND c.id_ not in (
+        select course_id from zd_org_major_course
+        where major_id=#{params.majorId}
+        AND (find_in_set(org_code,#{params.parentOrgCode})or org_code=#{params.orgCode})
+        )
+        <if test="params.courseName!=null and params.courseName!=''">
+            AND (
+            c.course_name like concat('%',#{params.courseName},'%')
+            or
+            c.course_code like concat('%',#{params.courseName},'%')
+            )
+        </if>
+
+        GROUP BY mc.major_id,mc.course_id
+    </select>
+    <select id="selectDisableCourseByOrg" resultMap="majorCourseOrgVOMap">
+        SELECT
+        omc.id_,m.`major_code`,m.major_name,c.course_scope,m.`major_type`,m.`student_type`,c.`course_code`,c.`course_name`,omc.semester_code,count(cr.id_)resource_count
+        FROM
+        zd_org_major_course omc
+        LEFT JOIN subject_major_base m ON omc.`major_id`=m.`id_`
+        LEFT JOIN subject_course c ON c.id_=omc.`course_id`
+        left join subject_course_resource cr on cr.course_id=c.id_
+        WHERE 1=1 and omc.org_code=#{params.orgCode}
+
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            and omc.semester_code=#{params.semesterCode}
+        </if>
+        <if test="params.majorId!=null and params.majorId!=''">
+            and omc.major_Id=#{params.majorId}
+        </if>
+        <if test="params.courseName!=null and params.courseName!=''">
+            and (c.course_name like concat('%',#{params.courseName},'%') or
+            c.course_code like concat('%',#{params.courseName},'%'))
+        </if>
+        group by m.id_,c.id_
+    </select>
+    <delete id="deleteByCourseIds">
+      delete from zd_org_major_course where course_id IN
+        <foreach collection="ids" item="item" separator="," close=")" open="(">
+            #{item}
+        </foreach>
+    </delete>
+    <delete id="deleteByMajorIds">
+        delete from zd_org_major_course where major_id IN
+        <foreach collection="ids" open="(" close=")" separator="," item="item">
+            #{item}
+        </foreach>
+    </delete>
+    <select id="selectResourceByCourseId" parameterType="java.util.Map"
+            resultMap="io.renren.modules.subject.dao.SubjectResourceDao.subjectResourceMap">
+        select
+        if(#{params.orgType}='1'||r.resource_type='2',
+        r.resource_name,'------')resource_name,r.resource_type,r.resource_code,
+        r.resource_version,r.isbn,r.price,r.id_
+        from
+        subject_resource r
+        left join subject_course_resource cr on cr.resource_id=r.id_
+        where 1=1 and
+        NOT EXISTS(
+        SELECT b.resource_id FROM zd_org_course_resource b
+        WHERE 1=1
+        AND b.`major_id`=#{params.majorId} and b.semester_code=#{params.semesterCode}
+        AND b.`resource_id`=cr.resource_id
+        AND b.`course_id`=cr.`course_id` AND
+        (FIND_IN_SET(b.org_code,#{params.parentOrgCodes}) OR b.org_code=#{params.orgCode}) )
+         and cr.course_id=#{params.courseId} and (FIND_IN_SET(r.org_code,#{params.parentOrgCodes}) OR r.org_code=#{params.orgCode})
+    </select>
+</mapper>

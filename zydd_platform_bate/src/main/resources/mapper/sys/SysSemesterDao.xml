@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.sys.dao.SysSemesterDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.sys.entity.SysSemesterEntity" id="sysSemesterMap">
+        <result property="id" column="id_"/>
+        <result property="name" column="name"/>
+        <result property="nd" column="nd"/>
+        <result property="xqdm" column="xqdm"/>
+        <result property="status" column="status"/>
+        <result property="isRefund" column="is_refund"/>
+        <result property="isOrder" column="is_order"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="semesterCode" column="semester_code"/>
+        <result property="allowRefundPercent" column="allow_Refund_percent"/>
+        <result property="enable" column="enable_"/>
+        <result property="remark" column="remark_"/>
+        <result property="isCurrent" column="is_current"/>
+    </resultMap>
+    <resultMap type="io.renren.modules.sys.entity.SysSemesterEntity" extends="sysSemesterMap" id="shengSemesterMap">
+        <result property="isCurrent" column="is_current"/>
+        <result property="semesterStartTime" column="semester_start_time"/>
+        <result property="semesterEndTime" column="semester_end_time"/>
+    </resultMap>
+    <update id="updateStatusNotInId" >
+        update  sys_semester
+        set status=#{status} where id_!=#{id}
+    </update>
+
+    <select id="selectListZYDD" resultMap="sysSemesterMap">
+        SELECT a.*,status is_current
+        FROM sys_semester a
+        order by nd desc,xqdm desc
+
+    </select>
+
+    <select id="selectListPage" resultMap="shengSemesterMap">
+    SELECT s.id_,so.id_ soId,IFNULL(so.status,0)is_current,s.`name`,s.nd,s.`xqdm`,s.`is_order`,s.`is_refund`,s.semester_code
+    FROM sys_semester s
+    LEFT JOIN sys_semester_org so ON s.semester_code=so.`semester_code`
+        <if test="params.orgCode!=null and params.orgCode!=''">
+            AND so.`org_code` =#{params.orgCode}
+        </if>
+    WHERE 1=1
+    <if test="params.isRefund=='1'.toString()">
+        and s.is_refund='1'
+    </if>
+
+     order by s.nd desc,s.xqdm desc
+    </select>
+
+    <select id="querySemester" resultType="io.renren.modules.sys.entity.SysSemesterEntity">
+        select * from sys_semester
+    </select>
+    <select id="selectCurrentSemester" resultMap="shengSemesterMap">
+      select s.id_,so.id_ soId,IFNULL(so.status,0)is_current,s.`name`,
+      s.nd,s.`xqdm`,s.`is_order`,s.`is_refund`,s.semester_code,so.semester_start_time,so.semester_end_time from
+    sys_semester s
+    LEFT JOIN sys_semester_org so ON s.semester_code=so.`semester_code`
+    where
+      (so.org_code=#{orgCode} or find_in_set(so.org_code,#{parentCodes})) and so.status='1' limit 1
+    </select>
+    <select id="selectZyddSemester" resultMap="shengSemesterMap">
+        select s.id_,s.status is_current,s.`name`,s.nd,s.`xqdm`,s.`is_order`,s.`is_refund`,s.semester_code from
+    sys_semester s
+    where s.status='1' limit 1
+    </select>
+    <select id="listAllByZydd" resultMap="shengSemesterMap">
+          select s.id_,s.status is_current,s.`name`,s.nd,s.`xqdm`,s.`is_order`,s.`is_refund`,s.semester_code from
+    sys_semester s
+
+
+    </select>
+    <select id="selectByCode" resultMap="sysSemesterMap">
+        select s.id_,s.`name`,s.nd,s.`xqdm`,s.`is_order`,s.`is_refund`,s.semester_code,s.allow_refund_percent from
+    sys_semester s where s.semester_code=#{semesterCode}
+    </select>
+
+
+</mapper>

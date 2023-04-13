@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.zd.dao.ZdBalanceCompanyRefundDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.zd.entity.ZdBalanceCompanyRefundEntity" id="zdBalanceCompanyRefundMap">
+        <result property="id" column="id_"/>
+        <result property="refundId" column="refund_id"/>
+        <result property="balanceCompanyId" column="balance_company_id"/>
+    </resultMap>
+    <resultMap id="zdBalanceCompanyRefundVOMap" type="io.renren.modules.zd.vo.ZdBalanceCompanyRefundVO">
+        <result property="mayang" column="mayang"/>
+        <result property="logisticCompany" column="logistic_company"/>
+        <result property="logisticNo" column="logistic_no"/>
+        <result property="totalRealNum" column="total_real_num"/>
+        <result property="shiyang" column="shiyang"/>
+        <result property="avgDiscount" column="avg_discount"/>
+        <result property="realname" column="realname"/>
+        <result property="createTime" column="create_time"/>
+
+    </resultMap>
+    <select id="listRefundListByBalanceId" resultMap="zdBalanceCompanyRefundVOMap">
+
+        select r.logistic_no,r.logistic_company,r.refund_code,
+        sum(rr.real_num*rr.refund_price)mayang,
+        sum(rr.real_num)total_real_num,
+        sum(rr.real_num*rr.refund_price*nitemdiscountrate)shiyang,
+        (select u.realname from sys_user u where u.user_id=r.create_by)realname,avg(rr.nitemdiscountrate)avg_discount,
+        r.create_time
+         from zd_balance_company_refund ci
+        left JOIN zd_refund_supplier r on ci.refund_id=r.id_
+        left join zd_refund_supplier_resource rr on r.id_=rr.refund_supplier_id
+        where ci.balance_company_id=#{balanceId}
+         GROUP BY r.id_
+    </select>
+
+
+</mapper>

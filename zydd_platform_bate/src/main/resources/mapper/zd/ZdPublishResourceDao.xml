@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.zd.dao.ZdPublishResourceDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.zd.entity.ZdPublishResourceEntity" id="zdPublishResourceMap">
+        <result property="id" column="id_"/>
+        <result property="publishId" column="publish_id"/>
+        <result property="resourceId" column="resource_id"/>
+        <result property="publishPrice" column="publish_price"/>
+        <result property="publishNum" column="publish_num"/>
+        <result property="mayng" column="mayng"/>
+        <result property="shiyang" column="shiyang"/>
+        <result property="realNum" column="real_num"/>
+        <result property="createTime" column="create_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="enable" column="enable_"/>
+        <result property="remark" column="remark_"/>
+        <result property="nitemdiscountrate" column="nitemdiscountrate"/>
+    </resultMap>
+    
+      <resultMap type="io.renren.modules.zd.vo.PublishResourceVO" extends="zdPublishResourceMap" id="publishResourceVOMap">
+        <result property="resourceCode" column="resource_code"/>
+        <result property="resourceName" column="resource_name"/>
+        <result property="isbn" column="isbn"/>
+        <result property="catalogId" column="catalog_id"/>
+        <!--<result property="publishPrice" column="publish_price"/>-->
+        <!--<result property="mayng" column="mayng"/>-->
+        <!--<result property="publishNum" column="publish_num"/>-->
+        <result property="resourceType" column="resource_type"/>
+        <result property="nitemdiscountrate" column="nitemdiscountrate"/>
+    </resultMap>
+    <delete id="deleteByPublishId">
+
+        delete from zd_publish_resource
+        where publish_id=#{publishId}
+    </delete>
+
+
+    <select id="queryPublishListDetail" resultMap="publishResourceVOMap">
+select pr.id_,r.resource_name,r.isbn,pr.real_num,
+r.resource_code,pr.publish_price,pr.publish_num,r.resource_type,
+pr.mayng,pr.shiyang,pr.nitemdiscountrate
+ from zd_publish_resource pr
+left join subject_resource r on r.id_=pr.resource_id
+where pr.publish_id=#{params.id}
+
+  </select>
+
+
+
+	<select id="getPublishResourceByOrgCode" resultMap="zdPublishResourceMap">
+    	select B.* from zd_publish as A,zd_publish_resource as B 
+    	
+    	<where>
+    		A.id_ = B.publish_id
+			<if test="fromOrgCode!=null and fromOrgCode!=''">
+				and A.from_org_code = #{fromOrgCode}
+			</if>    	
+    		<if test="toOrgCode!=null and toOrgCode!=''">
+    			and A.to_org_code = #{toOrgCode}
+    		</if>
+    		and A.publish_type = 0
+    	</where> 
+    
+    	
+    </select>
+    <select id="countByResourceIds" resultType="java.lang.Integer">
+        select count(0) from zd_publish_resource where resource_id in
+        <foreach collection="list" separator="," close=")" open="(" item="item">
+            #{item}
+        </foreach>
+    </select>
+    <select id="selectByPublishId" resultMap="zdPublishResourceMap">
+
+    select * from zd_publish_resource where publish_id=#{publishId}
+
+    </select>
+
+
+</mapper>

@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.zd.dao.ZdSourceResourceDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.zd.entity.ZdSourceResourceEntity" id="zdSourceResourceMap">
+        <result property="id" column="id_"/>
+        <result property="sourceId" column="source_id"/>
+        <result property="courseId" column="course_id"/>
+        <result property="resourceId" column="resource_id"/>
+        <result property="sourceNum" column="source_num"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="resourcePrice" column="resource_price"/>
+        <result property="itemStatus" column="item_status"/>
+        <result property="mayang" column="mayang"/>
+        <result property="shiyang" column="shiyang"/>
+        <result property="enable" column="enable_"/>
+        <result property="remark" column="remark_"/>
+    </resultMap>
+    <resultMap type="io.renren.modules.zd.vo.ZdSourceDetailVO" id="zdSourceDetailVOMap">
+         <result property="resourceName" column="resource_name"/>
+         <result property="publishingName" column="publishing_Name"/>
+         <result property="supplierName" column="supplier_Name"/>
+         <result property="resourceType" column="resource_type"/>
+         <result property="resourceVersion" column="resource_version"/>
+         <result property="price" column="price"/>
+
+    </resultMap>
+
+
+    <select id="selectListPage" resultType="io.renren.modules.zd.vo.ZdSourceDetailVO">
+            SELECT zsr.*,r.`resource_code`,r.`resource_name`,r.`resource_type`,r.`publishing_name`,r.`price`
+        FROM zd_source_resource zsr
+         LEFT JOIN subject_resource r ON zsr.resource_id=r.`id_`
+        left join zd_source s on s.id_=zsr.source_id
+         where 1=1
+        <if test="params.orgCode!=null and params.orgCode!=null">
+         and s.org_code=#{params.orgCode}
+        </if>
+        <if test="params.toOrgCode!=null and params.toOrgCode!=null">
+         and s.to_org_code=#{params.toOrgCode}
+        </if>
+         <if test="params.sourceId!=null and params.sourceId!=null">
+          and zsr.source_id=#{params.sourceId}
+         </if>
+    </select>
+    <select id="selectBySourceId" resultMap="zdSourceResourceMap">
+        select * from zd_source_resource where source_id=#{sourceId}
+    </select>
+
+    <delete id="deleteBySourceIds">
+    delete from zd_source_resource
+    where source_id
+    IN 
+    <foreach collection="ids" separator="," close=")" open="(" item="item">
+        #{item}
+    </foreach>
+
+    </delete>
+    <update id="updateVersion">
+
+    update zd_source_resource a inner join zd_source s on s.id_=a.source_id
+    set a.resource_id=#{newResourceId}
+     where a.resource_id=#{oldResourceId} and s.semester_code=#{semesterCode}
+     and s.org_code=#{orgCode} and s.source_no=#{sourceNo}
+    </update>
+    <update id="updatePrice">
+        update zd_source_resource
+        set resource_Price=#{subjectResource.price}
+        where resource_id=#{subjectResource.id}
+
+    </update>
+
+
+    <select id="countByResourceIds" resultType="java.lang.Integer">
+      select count(0) from zd_source_resource
+      where resource_id in
+      <foreach collection="ids" item="item" separator="," close=")" open="(">
+          #{item}
+      </foreach>
+    </select>
+    <select id="selectResourceAll" resultType="io.renren.modules.zd.vo.ZdSourceDetailVO">
+        SELECT zsr.*,r.`resource_code`,r.`resource_name`,r.`resource_type`,
+        r.`publishing_name`,r.`price`,s.source_no,
+        (SELECT org_name FROM sys_org dept WHERE dept.org_code=s.to_org_code)county_org_name,
+        (SELECT org_name FROM sys_org dept WHERE dept.org_code=s.org_code)province_org_name
+        FROM zd_source_resource zsr
+        LEFT JOIN subject_resource r ON zsr.resource_id=r.`id_`
+        left join zd_source s on s.id_=zsr.source_id
+        where 1=1
+        and s.is_sync=#{searchForm.isSync}
+        AND  EXISTS (
+        SELECT * FROM zd_source s
+        LEFT JOIN zd_source_order_resource sor ON s.id_=sor.`source_id`
+        left join zd_order_resource zor on zor.id_=sor.order_resource_id
+        WHERE   sor.`source_resource_id`=zsr.id_
+        and zor.zmcr_id in
+        <foreach collection="searchForm.zmcrList" separator="," close=")" open="(" item="item">
+            #{item}
+        </foreach>
+        )
+        and
+        EXISTS(
+        SELECT * FROM sys_org o
+        WHERE o.`org_code`=s.to_org_code
+        AND
+        <foreach collection="searchForm.orgList" item="item" close=")" open="(" separator="or">
+            FIND_IN_SET(#{item},o.`parent_codes`)
+        </foreach>
+
+        )
+
+
+    </select>
+    <select id="selectLeftCount" resultType="java.lang.Integer">
+
+
+        select count(0) from zd_source s
+        left join zd_source_resource sr on s.id_=sr.source_id
+        where s.source_no=#{sourceNo} and sr.del_flag=0
+    </select>
+
+    <update id="updateResourceVersion">
+
+      update  zd_source_resource zsr
+        inner join zd_source_order_resource sor on sor.source_resource_id=zsr.id_
+        left join zd_order_resource zor on zor.id_=sor.order_resource_id
+        left join zd_source s on s.id_=zsr.source_id
+        set zsr.resource_id=(select id_ from subject_resource where resource_code=#{newResourceCode})
+        where 1=1 and s.semester_code=#{semesterCode}
+        and s.is_sync !=1
+        and zor.zmcr_id=#{zmcrId}
+        and zsr.resource_id=(select id_ from subject_resource where resource_code=#{oldResourceCode})
+        and
+        EXISTS(
+        SELECT * FROM sys_org o
+        WHERE o.`org_code`=s.to_org_code
+        AND
+        <foreach collection="orgList" item="item" close=")" open="(" separator="or">
+            FIND_IN_SET(#{item},o.`parent_codes`)
+        </foreach>
+        )
+
+    </update>
+    <update id="updateStatus">
+
+        update zd_source_resource
+        set status=#{status}
+        where source_id=#{sourceId}
+
+    </update>
+</mapper>

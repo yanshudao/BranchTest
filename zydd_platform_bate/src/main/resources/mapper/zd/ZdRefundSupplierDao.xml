@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.zd.dao.ZdRefundSupplierDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.zd.entity.ZdRefundSupplierEntity" id="zdRefundSupplierMap">
+        <result property="id" column="id_"/>
+        <result property="refundCode" column="refund_code"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="supplierId" column="supplier_id"/>
+        <result property="refundType" column="refund_type"/>
+        <result property="refundName" column="refund_name"/>
+        <result property="status" column="status"/>
+        <result property="semesterCode" column="semester_code"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="isSync" column="is_sync"/>
+        <result property="logisticType" column="logistic_type"/>
+        <result property="logisticNo" column="logistic_no"/>
+        <result property="logisticCompany" column="logistic_company"/>
+        <result property="logisticBag" column="logistic_bag"/>
+        <result property="delFlag" column="del_flag"/>
+        <result property="enable" column="enable_"/>
+        <result property="remark" column="remark_"/>
+        <result property="fromOrgCode" column="from_org_code"/>
+        <result property="toOrgCode" column="to_org_code"/>
+        <result property="logisticAddress" column="logistic_address"/>
+        <result property="result" column="result"/>
+        <result property="reason" column="reason"/>
+        <result property="erpcode" column="erpcode"/>
+        <result property="shiyang" column="shiyang"/>
+        <result property="avgdiscount" column="avgdiscount"/>
+        <result property="ncStatus" column="nc_status"/>
+        <result property="logisticPerson" column="logistic_person"/>
+        <result property="logisticTelphone" column="logistic_telphone"/>
+        <result property="completeBy" column="complete_by"/>
+        <result property="completeTime" column="complete_time"/>
+        <result property="confirmBy" column="confirm_by"/>
+        <result property="confirmTime" column="confirm_time"/>
+        <result property="shippingAddress" column="shipping_address"/>
+        <result property="shippingPhone" column="shipping_phone"/>
+        <result property="shippingPerson" column="shipping_person"/>
+    </resultMap>
+    <resultMap id="refundOrderListMap" type="io.renren.modules.zd.entity.ZdRefundOrderListEntity">
+        <result property="id" column="id_" />
+        <result property="resourceCode" column="resource_code" />
+        <result property="refundCode" column="refund_code" />
+        <result property="logisticNo" column="logistic_no" />
+        <result property="semeName" column="seme_name" />
+        <result property="kinds" column="kinds" />
+        <result property="refundTotal" column="refund_total" />
+        <result property="mayangTotal" column="mayang_total" />
+        <result property="shiyang" column="shiyang" />
+        <result property="refundUser" column="refund_user" />
+        <result property="updateTime" column="update_time" />
+        <result property="createTime" column="create_time" />
+        <result property="status" column="status" />
+        <result property="isSync" column="is_sync" />
+        <result property="logisticCompany" column="logistic_company" />
+        <result property="logisticPerson" column="logistic_person"/>
+        <result property="logisticTelphone" column="logistic_telphone"/>
+        <result property="supplierName" column="supplierName" />
+        <result property="createName" column="create_name" />
+    </resultMap>
+    <!--v2 lixiang-->
+    <select id="queryRefundOrderList" resultMap="refundOrderListMap">
+        SELECT
+        r.id_,
+        r.refund_code,
+        r.is_sync,
+        logistic_no,
+        (select s.name from sys_semester s where s.semester_code=r.semester_code) seme_name,
+        (select s.name from sys_semester s where s.semester_code=r.refund_semester_code) refundSemesterName,
+        r.update_time,
+        r.`status`,
+        r.logistic_company,
+        r.create_time,
+        (select o.org_name from sys_org o where o.org_code=r.from_org_code)from_org_name,
+        (select o.org_name from sys_org o where o.org_code=r.to_org_code)to_org_name,
+        (select c.company_name from sys_company c where c.id_=r.supplier_id)supplierName,
+        sum(rr.real_num)refund_total,
+        count(rr.resource_id)kinds,
+        sum(rr.real_num*rr.refund_price)mayang_total,
+        sum(rr.real_num*rr.refund_price*ifnull(ROUND(nitemdiscountrate/100,2),1))shiyang,
+        (select u.realname from sys_user u where u.user_id=r.create_by)create_name
+        FROM
+        zd_refund_supplier r
+        left join zd_refund_supplier_resource rr on rr.refund_supplier_id=r.id_
+        left join subject_resource sr on sr.id_ = rr.resource_id
+
+        left join sys_org_setting os on os.org_code=r.from_org_code
+        left join  sys_user u on  os.salesmancode = u.username
+        WHERE 1=1
+        <if test="params.fromOrgCode != null and params.fromOrgCode!=''">
+            AND r.from_Org_Code = #{params.fromOrgCode}
+        </if>
+
+        <if test="params.salesmancode != null and params.salesmancode!=''">
+            AND u.username = #{params.salesmancode}
+        </if>
+        <if test="params.salesmancode != null and params.salesmancode!=''">
+            AND os.salesmancode = #{params.salesmancode}
+        </if>
+        <if test="params.orgCodeList != null and params.orgCodeList.size()>0">
+            AND r.from_Org_Code in
+            <foreach collection="params.orgCodeList" item="item" separator="," close=")" open="(" >
+                #{item}
+            </foreach>
+        </if>
+
+        <if test="params.semesterCodeList != null and params.semesterCodeList.size()>0">
+            AND r.semester_code IN
+            <foreach collection="params.semesterCodeList" item="item" separator="," close=")" open="(" >
+                #{item}
+            </foreach>
+        </if>
+        <if test="params.semesterCode != null and params.semesterCode!=''">
+            AND r.semester_Code = #{params.semesterCode}
+        </if>
+        <if test="params.toOrgCode != null and params.toOrgCode!=''">
+            AND r.to_Org_Code = #{params.toOrgCode}
+        </if>
+        <if test="params.status != null and params.status!=''">
+            AND r.`status` = #{params.status}
+        </if>
+        <if test="params.refund_code != null and params.refund_code!=''">
+            AND r.refund_code LIKE CONCAT('%', #{params.refund_code} ,'%')
+        </if>
+
+        <if test="params.refundCode != null and params.refundCode!=''">
+            AND r.refund_code LIKE CONCAT('%', #{params.refundCode} ,'%')
+        </if>
+        <if test="params.startTime != null and params.startTime!=''">
+            AND DATE_FORMAT(r.update_time,'%Y-%m-%d') &gt;= #{params.startTime}
+        </if>
+        <if test="params.endTime != null and params.endTime!=''">
+            AND DATE_FORMAT(r.update_time,'%Y-%m-%d') &lt;= #{params.endTime}
+        </if>
+        <if test="params.statusList!=null and params.statusList.size()>0">
+            and r.status in <foreach collection="params.statusList" item="item" open="(" close=")" separator=",">
+            #{item}
+        </foreach>
+        </if>
+        GROUP BY r.id_
+        order by r.create_time desc,r.status asc,r.is_sync asc,r.from_Org_Code desc
+    </select>
+    <select id="selectByRefundId" resultMap="zdRefundSupplierMap">
+        select * from zd_refund_supplier
+        a where foreign_refund_id=#{refundId}
+
+
+    </select>
+    <resultMap type="io.renren.modules.search.vo.StatisticsRefundSupplierResourceVO" id="statisticsRefundResourceVOMap">
+
+        <result property="refundCode" column="refund_code"/>
+        <result property="resourceCode" column="resource_Code"/>
+        <result property="resourceName" column="resource_Name"/>
+        <result property="resourceType" column="resource_Type"/>
+        <result property="resourceVersion" column="resource_Version"/>
+        <result property="fromOrgName" column="from_Org_Name"/>
+        <result property="refundPrice" column="refund_price"/>
+        <result property="toOrgName" column="to_Org_Name"/>
+        <result property="semesterCode" column="semester_Code"/>
+        <result property="semesterName" column="semester_Name"/>
+        <result property="totalRefundNum" column="total_Refund_Num"/>
+        <!--<result property="logisticNo" column="logistic_No"/>-->
+        <result property="totalRefundPrice" column="total_Refund_Price"/>
+        <result property="totalRefundNum" column="total_Refund_Num"/>
+        <result property="publishCount" column="publish_Count"/>
+
+    </resultMap>
+    <select id="selectStatisticsByMap"
+            resultMap="statisticsRefundResourceVOMap">
+
+        SELECT r.resource_code,r.resource_name,r.resource_type,r.resource_version,zr.refund_code,zrr.refund_price,
+        SUM(zrr.real_num)total_Refund_Num,
+        SUM(zrr.real_num*zrr.refund_price)total_Refund_Price,
+        ifnull(p.publish_num,0)publish_Count,
+        (SELECT g.org_name FROM sys_org g WHERE
+        zr.from_org_code = g.org_code ) AS from_org_name,(SELECT g.org_name FROM sys_org g WHERE
+        zr.to_org_code = g.org_code ) AS to_org_name,
+        (SELECT s.name FROM sys_semester s WHERE s.semester_code=zr.semester_Code)semester_name,
+        zr.semester_code
+        FROM zd_refund_supplier_resource zrr
+        LEFT JOIN zd_refund_supplier zr ON zr.id_=zrr.refund_supplier_id
+        left join
+        (
+        SELECT SUM(pr.publish_num)publish_num,p.`to_org_code`,p.`semester_code`,pr.resource_id
+        FROM zd_publish p
+        LEFT JOIN zd_publish_resource pr ON p.id_=pr.publish_id
+        where 1=1
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            and p.semester_code=#{params.semesterCode}
+        </if>
+        GROUP BY p.to_org_code,p.semester_code,pr.resource_id
+        ) p on zr.from_org_code=p.to_org_code and zr.semester_code=p.semester_code and p.resource_id=zrr.resource_id
+        LEFT JOIN subject_resource r ON r.id_=zrr.resource_id
+        where 1=1
+        <if test="params.refundId!=null and params.refundId!=''">
+            and zr.id_=#{params.refundId}
+        </if>
+        <if test="params.supplierId!=null and params.supplierId!=''">
+            and zr.supplier_id=#{params.supplierId}
+        </if>
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            and zr.semester_code=#{params.semesterCode}
+        </if>
+        <if test="params.orgCode!=null and params.orgCode!=''">
+            and zr.from_org_code=#{params.orgCode}
+        </if>
+        <if test="params.resourceName!=null and params.resourceName!=''">
+            and (r.resource_Code like concat('%',#{params.resourceName},'%')
+            or r.resource_name like concat('%',#{params.resourceName},'%'))
+        </if>
+        <if test="params.toOrgCode!=null and params.toOrgCode!=''">
+            and zr.to_org_code=#{params.toOrgCode}
+        </if>
+        GROUP BY zrr.resource_id
+    </select>
+    <select id="getRefundPrice" resultType="io.renren.modules.zd.vo.ZdBalancePriceVO">
+        select  SUM(rr.mayang)mayang,sum(rr.shiyang)shiyang from zd_refund_supplier_resource rr
+        left join zd_refund_supplier r on r.id_=rr.refund_supplier_id
+        where r.id_ in
+        <foreach collection="list" open="(" close=")" separator="," item="item">
+            #{item.id}
+        </foreach>
+    </select>
+    <resultMap id="zdBalanceRefundDetailVOMap" type="io.renren.modules.zd.vo.ZdBalanceRefundDetailVO">
+        <result property="id" column="id_" />
+        <result property="resourceCode" column="resource_code" />
+        <result property="refundCode" column="refund_code" />
+        <result property="logisticNo" column="logistic_no" />
+        <result property="semeName" column="seme_name" />
+        <result property="kinds" column="kinds" />
+        <result property="refundTotal" column="refund_total" />
+        <result property="mayangTotal" column="mayang_total" />
+        <result property="shiyang" column="shiyang" />
+        <result property="refundUser" column="refund_user" />
+        <result property="updateTime" column="update_time" />
+        <result property="createTime" column="create_time" />
+        <result property="status" column="status" />
+        <result property="isSync" column="is_sync" />
+        <result property="logisticCompany" column="logistic_company" />
+        <result property="logisticPerson" column="logistic_person"/>
+        <result property="logisticTelphone" column="logistic_telphone"/>
+        <result property="supplierName" column="supplierName" />
+        <result property="createName" column="create_name" />
+    </resultMap>
+    <select id="queryBalanceRefundDetail" resultMap="zdBalanceRefundDetailVOMap">
+        SELECT
+        r.id_,
+        r.refund_code,
+        r.is_sync,
+        logistic_no,
+        (select s.name from sys_semester s where s.semester_code=r.semester_code) seme_name,
+        (select s.name from sys_semester s where s.semester_code=r.semester_code) refund_user,
+        r.update_time,
+        r.`status`,
+        r.logistic_company,
+        r.create_time,
+        (select o.org_name from sys_org o where o.org_code=r.from_org_code)from_org_name,
+        (select o.org_name from sys_org o where o.org_code=r.to_org_code)to_org_name,
+        (select c.company_name from sys_company c where c.id_=r.supplier_id)supplierName,
+        sum(rr.real_num)refund_total,
+        count(rr.resource_id)kinds,
+        sum(rr.real_num*rr.refund_price)mayang_total,
+        sum(rr.real_num*rr.refund_price*ifnull(ROUND(nitemdiscountrate/100,2),1))shiyang,
+        (select u.realname from sys_user u where u.user_id=r.create_by)create_name
+        FROM zd_balance_company_refund a
+        INNER JOIN zd_balance_company zbc ON zbc.id_=a.balance_company_id
+        left join zd_refund_supplier r on a.refund_id=r.id_
+        left join zd_refund_supplier_resource rr on rr.refund_supplier_id=r.id_
+        left join subject_resource sr on sr.id_ = rr.resource_id
+        left join sys_org_setting os on os.org_code=r.from_org_code
+        left join  sys_user u on  os.salesmancode = u.username
+        WHERE 1=1 and zbc.semester_code=#{semesterCode}
+        and zbc.to_org_code=#{orgCode}  and zbc.company_id=#{companyId}
+        <if test="balanceId!=null and balanceId!=''">
+            and zbc.id_=#{balanceId}
+        </if>
+        GROUP BY zbc.semester_code,zbc.to_org_code,zbc.company_id,rr.resource_id
+        order by r.status asc,r.is_sync asc,r.create_time desc
+    </select>
+</mapper>

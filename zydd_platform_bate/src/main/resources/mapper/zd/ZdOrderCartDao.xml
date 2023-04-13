@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.zd.dao.ZdOrderCartDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.zd.entity.ZdOrderCartEntity" id="zdOrderCartMap">
+        <result property="id" column="id_"/>
+        <result property="majorId" column="major_id"/>
+        <result property="courseId" column="course_id"/>
+        <result property="resourceId" column="resource_id"/>
+        <result property="catNum" column="cat_num"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+    <resultMap type="io.renren.modules.zd.vo.ZdOrderCartVO" id="cartVOMap">
+        <result property="majorCode" column="major_code"/>
+        <result property="majorName" column="major_name"/>
+        <result property="courseCode" column="course_code"/>
+        <result property="courseName" column="course_name"/>
+    </resultMap>
+
+    <resultMap type="io.renren.modules.zd.vo.ZdCatVO" id="zdCatVOMap">
+
+        <result property="majorName" column="major_name"/>
+        <result property="majorCode" column="major_code"/>
+        <result property="studentType" column="student_type"/>
+        <result property="majorType" column="major_type"/>
+        <collection property="resourceList" ofType="io.renren.modules.zd.vo.ZdCatResourceVO">
+            <result property="id" column="id_"/>
+            <result property="courseName" column="course_name"/>
+            <result property="courseCode" column="course_code"/>
+            <result property="resourceName" column="resource_name"/>
+            <result property="resourceId" column="resource_id"/>
+            <result property="resourceType" column="resource_type"/>
+            <result property="catNum" column="cat_num"/>
+            <result property="price" column="price"/>
+            <result property="createTime" column="create_time"/>
+        </collection>
+    </resultMap>
+    <select id="selectListPage" resultMap="zdCatVOMap">
+
+
+
+SELECT c.course_name,c.course_code,m.major_code,m.major_name,m.student_type,
+m.major_type,zo.id_,zo.resource_id,sum(zo.cat_num)cat_num,if(r.resource_type='2',
+        r.resource_name,'------')resource_name,r.resource_type,r.price
+        FROM zd_order_cart zo
+        LEFT JOIN subject_major_base m ON zo.major_id=m.id_
+LEFT JOIN subject_course c ON c.id_=zo.course_id
+left join subject_resource r on r.id_=zo.resource_id
+where zo.create_by=#{params.createBy}
+group by zo.major_id,zo.course_id,zo.resource_id
+
+
+    </select>
+    <select id="selectByMCRId" resultMap="zdOrderCartMap">
+        select * from zd_order_cart where major_id=#{majorId}
+        and course_id=#{courseId} and resource_id=#{resourceId}
+        and create_by=#{createBy}
+
+    </select>
+    <select id="selectVOByIds" resultMap="cartVOMap">
+        select zoc.id_,zoc.major_id,zoc.course_id,zoc.resource_id,sum(zoc.cat_num)cat_num
+        from zd_order_cart
+      zoc left join subject_major_base m on m.id_=zoc.major_id
+      left join subject_course c on c.id_=zoc.course_id
+      left join subject_resource r on r.id_=zoc.resource_id
+      where zoc.id_ in <foreach collection="ids" separator="," close=")" open="(" item="item">
+        #{item}
+    </foreach>
+        group by zoc.major_id,zoc.course_id,zoc.resource_id
+    </select>
+
+
+</mapper>

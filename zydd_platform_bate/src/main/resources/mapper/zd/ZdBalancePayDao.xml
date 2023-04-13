@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="io.renren.modules.zd.dao.ZdBalancePayDao" >
+
+  <!--流水表的字段映射-->
+  <resultMap id="BaseResultForAccountMap" type="io.renren.modules.zd.entity.ZdBalancePayEntity" >
+
+    <result column="id_" property="id" />
+    <result column="balance_Id" property="balanceId" jdbcType="VARCHAR" />
+    <result column="low_level_org" property="lowLevelOrg" jdbcType="VARCHAR" />
+    <result column="sum" property="sum" jdbcType="DECIMAL" />
+    <result column="create_By" property="createBy" jdbcType="VARCHAR" />
+    <result column="create_time" property="createTime" jdbcType="TIMESTAMP" />
+    <result column="should_pay" property="shouldPay" jdbcType="DECIMAL" />
+    <result column="debt" property="debt" jdbcType="DECIMAL" />
+  </resultMap>
+
+  <!--流水表的字段映射VO类-->
+  <resultMap id="BaseResultForAccountVO" extends="BaseResultForAccountMap" type="io.renren.modules.zd.vo.BalancePayResourceVO" >
+    <result property="realname" column="realname"/>
+    <result property="orgname" column="org_name"/>
+  </resultMap>
+
+  <!--孔 begin-->
+  <!--根据结算单号获取到对应的实洋数-->
+  <select id="getActualToatal" resultType="java.math.BigDecimal">
+    select actual_total from zd_balance where id_ = #{balanceId}
+  </select>
+  <!--根据结算单号计算所有已付款的总和-->
+  <select id="getsumAccount" resultType="java.math.BigDecimal">
+    select sum(`sum`) from zd_balance_pay where balance_id = #{balanceId}
+  </select>
+
+  <!-- 根據单据号查询流水信息 -->
+  <select id="selectPayDetailForAccount" resultMap="BaseResultForAccountVO">
+    SELECT
+        so.org_name,
+        su.realname,
+        bpr.*
+    FROM
+        zd_balance_pay bpr,
+        sys_org so,
+        sys_user su
+    WHERE
+        so.org_code = bpr.low_level_org
+    AND su.user_id = bpr.create_by
+    AND balance_id = #{balanceId}
+  </select>
+
+  <!--孔 end-->
+  
+</mapper>

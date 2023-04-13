@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.zd.dao.ZdCartDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.zd.entity.ZdCartEntity" id="zdCatMap">
+        <result property="id" column="id_"/>
+        <result property="majorId" column="major_id"/>
+        <result property="courseId" column="course_id"/>
+        <result property="resourceId" column="resource_id"/>
+        <result property="catNum" column="cat_num"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="zmcrId" column="zmcr_id"/>
+    </resultMap>
+    <resultMap type="io.renren.modules.zd.vo.ZdCatVO" id="zdCatVOMap">
+
+        <result property="zmcrId" column="zmcr_Id"/>
+        <result property="majorName" column="major_name"/>
+        <result property="majorCode" column="major_code"/>
+        <result property="studentType" column="student_type"/>
+        <result property="majorType" column="major_type"/>
+        <collection property="resourceList" ofType="io.renren.modules.zd.vo.ZdCatResourceVO">
+            <result property="id" column="id_"/>
+            <result property="courseName" column="course_name"/>
+            <result property="courseCode" column="course_code"/>
+            <result property="resourceName" column="resource_name"/>
+            <result property="resourceId" column="resource_id"/>
+            <result property="resourceType" column="resource_type"/>
+            <result property="catNum" column="cat_num"/>
+            <result property="price" column="price"/>
+            <result property="createTime" column="create_time"/>
+        </collection>
+    </resultMap>
+    <select id="selectListPage" resultMap="zdCatVOMap">
+
+
+     SELECT (SELECT course_name FROM subject_course c WHERE c.course_code=om.course_code)course_name,
+(SELECT major_name FROM subject_major_base m WHERE m.major_code=om.major_code LIMIT 1)major_name,
+om.course_code,om.major_code,om.student_type,om.major_type,
+zo.id_,zo.resource_id,zo.cat_num,r.resource_name,r.resource_type,r.price
+        FROM zd_cart zo
+        INNER JOIN zd_major_course_resource om ON zo.zmcr_id=om.id_
+        LEFT JOIN subject_resource r ON r.resource_code=om.resource_code
+where zo.create_by=#{params.createBy}
+
+    </select>
+    <select id="selectByMCRId" resultMap="zdCatMap">
+        select * from zd_cart where  zmcr_Id=#{zmcrId}
+        and create_by=#{createBy}
+
+    </select>
+    <resultMap type="io.renren.modules.zd.vo.ZdOrderCartVO" id="cartVOMap" extends="zdCatMap">
+        <result property="majorCode" column="major_code"/>
+        <result property="catNum" column="cat_num"/>
+        <result property="majorName" column="major_name"/>
+        <result property="courseCode" column="course_code"/>
+        <result property="courseName" column="course_name"/>
+        <result property="zmcrId" column="zmcr_id"/>
+    </resultMap>
+
+    <select id="selectVOByIds" resultMap="cartVOMap">
+        select
+        (SELECT course_name FROM subject_course c WHERE c.course_code=om.course_code)course_name,
+        (SELECT major_name FROM subject_major_base m WHERE m.major_code=om.major_code LIMIT 1)major_name,
+        zoc.id_,om.major_code,om.major_type,om.student_type,om.course_code,
+        om.resource_code,zoc.cat_num,zoc.zmcr_id,r.id_ resource_id
+        from zd_cart zoc
+        INNER JOIN zd_major_course_resource om ON zoc.zmcr_id=om.id_
+        LEFT JOIN subject_resource r ON r.resource_code=om.resource_code
+        where zoc.id_ in
+        <foreach collection="ids" separator="," close=")" open="(" item="item">
+        #{item}
+        </foreach>
+
+    </select>
+    <select id="listOrg" resultType="java.util.List">
+        select org_name orgName,count(0)cat_num catNum
+        from zd_cart c
+        left join sys_org o on c.org_code=o.org_code
+        where c.create_by=#{params.userId}
+    </select>
+    <select id="listAll"  resultMap="cartVOMap">
+
+     SELECT  r.resource_code,r.price,o.org_name countyOrgName,zo.cat_num,
+          zo.cat_num * r.price mayang,om.subject_type,
+        om.course_code,om.major_code,om.student_type,om.major_type, zo.id_,zo.resource_id,zo.cat_num,r.resource_name,r.resource_type,r.price,
+        (
+        SELECT course_name FROM subject_course c WHERE c.course_code=om.course_code)course_name,
+        (SELECT major_name FROM subject_major_base m WHERE m.major_code=om.major_code LIMIT 1)major_name
+        FROM zd_cart zo
+        INNER JOIN zd_major_course_resource om ON zo.zmcr_id=om.id_
+        LEFT JOIN subject_resource r ON r.resource_code=om.resource_code
+        LEFT JOIN sys_org o ON o.`org_code`=zo.org_code
+    where 1=1 and zo.zmcr_id in
+    <foreach collection="searchForm.zmcrList" item="item" close=")" open="(" separator=",">
+        #{item}
+    </foreach>
+       and
+        EXISTS(
+        SELECT * FROM sys_org o
+        WHERE o.`org_code`=zo.org_code
+        AND
+        <foreach collection="searchForm.orgList" item="item" close=")" open="(" separator="or">
+            FIND_IN_SET(#{item},o.`parent_codes`)
+        </foreach>
+
+        )
+   order by zo.create_time desc
+
+    </select>
+    <update id="updateVersion"  >
+
+       update
+        zd_cart zo
+        set zo.zmcr_id=#{newZmcrId}
+        where 1=1 and zo.zmcr_id=#{oldZmcrId}
+        and
+        EXISTS(
+        SELECT * FROM sys_org o
+        WHERE o.`org_code`=zo.org_code
+        AND
+        <foreach collection="orgList" item="item" close=")" open="(" separator="or">
+            FIND_IN_SET(#{item},o.`parent_codes`)
+        </foreach>
+
+        )
+
+
+    </update>
+
+</mapper>

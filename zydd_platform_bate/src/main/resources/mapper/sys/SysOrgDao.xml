@@ -1,0 +1,467 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.sys.dao.SysOrgDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.sys.entity.SysOrgEntity" id="sysOrgMap">
+        <result property="id" column="id_"/>
+        <result property="orgName" column="org_name"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="sortNo" column="sort_no"/>
+        <result property="leaf" column="leaf_"/>
+        <result property="enable" column="enable_"/>
+        <result property="remark" column="remark_"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="orgType" column="org_type"/>
+        <result property="parentIds" column="parent_ids"/>
+        <result property="parentCodes" column="parent_codes"/>
+        <result property="fullCodes" column="full_codes"/>
+        <result property="areaCode" column="area_Code"/>
+        <result property="isParent" column="is_parent"/>
+    </resultMap>
+
+    <select id="selectParentByOrgCode" resultMap="sysOrgMap">
+        select o.* from sys_org o where o.id_=(select parent_id from sys_org where org_code=#{orgCode})
+    </select>
+
+    <select id="selectByOrgCode" resultMap="sysOrgMap">
+        select o.* from sys_org o where o.org_code=#{orgCode}
+    </select>
+
+    <select id="selectIdByParentId">
+         select o.id_ from  sys_org o where o.parent_ids like concat('%',#{id},'%')
+    </select>
+
+   <select id="selectCodeByParentId">
+         select o.org_code from  sys_org o where o.parent_ids like concat('%',#{id},'%')
+    </select>
+    <select id="selectChildren" resultMap="sysOrgMap">
+
+        select o.* from sys_org o where
+         1=1
+         <if test="params.orgCode!=null and params.orgCode!=''">
+          and   o.parent_codes LIKE concat('%',#{params.orgCode},'%')
+         </if>
+        <if test="params.parentId!=null and params.parentId!=''">
+           and  o.parent_id=#{params.parentId}
+        </if>
+        <if test="params.orgType!=null and params.orgType!=''">
+            and  o.org_Type=#{params.orgType}
+        </if>
+        <if test="params.orgTypeList!=null and params.orgTypeList.size()>0">
+            and  o.org_Type in
+            <foreach collection="params.orgTypeList" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        order by o.org_code
+    </select>
+    <select id="selectByParentId" resultMap="sysOrgMap">
+        select o.* from  sys_org o where o.parent_id=#{parentId}
+    </select>
+    <select id="selectParent"  resultMap="sysOrgMap">
+          SELECT o.* FROM sys_org o WHERE FIND_IN_SET(o.org_code,(SELECT parent_codes FROM sys_org WHERE org_code=#{params.orgCode}))
+    </select>
+
+
+    <resultMap type="io.renren.modules.sys.vo.SysOrgVO1" id="sysOrgMap2">
+        <result property="person" column="person"/>
+        <result property="mobile" column="mobile"/>
+        <result property="address" column="address"/>
+        <result property="zipCode" column="zip_code"/>
+        <result property="id" column="id_"/>
+        <result property="orgName" column="org_name"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="sortNo" column="sort_no"/>
+        <result property="leaf" column="leaf_"/>
+        <result property="enable" column="enable_"/>
+        <result property="remark" column="remark_"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="orgType" column="org_type"/>
+    </resultMap>
+
+
+    <select id="queryOrgByType"  resultMap="sysOrgMap2">
+        select (select g.person from sys_org_setting g where a.org_code = g.org_code ) as person, (select g.tel_phone from sys_org_setting g where a.org_code = g.org_code ) as mobile , (select g.address from sys_org_setting g where a.org_code = g.org_code ) as address , (select g.zip_code from sys_org_setting g where a.org_code = g.org_code ) as zip_code ,a.* from sys_org a  where 1 = 1
+        <if test="params.orgType!=null and params.orgType!=''">
+            and org_type = #{params.orgType}
+        </if>
+    </select>
+
+    <!--孔begin-->
+    <!--獲取省級用戶管轄範圍内的所有縣級單位-->
+    <select id="getRefundOrgInfotWithoutFilter" resultType="java.lang.String">
+        SELECT
+        org.org_code
+        FROM
+        sys_org org
+        WHERE
+        org.org_type = '3'
+        AND org.parent_codes LIKE (
+        SELECT
+        CONCAT('%', ur.org_code, '%')
+        FROM
+        sys_user ur
+        WHERE
+        ur.user_id = #{user_id}
+        )
+    </select>
+    <!--获取单位code与单位之间的关联关系-->
+    <select id="getAllOrgInfo" resultMap="sysOrgMap">
+        SELECT
+        org.org_code,org.org_name
+        FROM
+        sys_org org
+    </select>
+    <!--孔 end-->
+    <resultMap type="io.renren.modules.zd.vo.PublicshCourseOrderResultVO" id="mySysOrgMap">
+        <result property="orgId" column="org_id"/>
+        <result property="orgName" column="org_name"/>
+        <result property="person" column="person"/>
+        <result property="telPhone" column="tel_phone"/>
+        <result property="zipCode" column="zip_code"/>
+        <result property="address" column="address"/>
+    </resultMap>
+    <select id="selectSettiingByOrgCode" resultMap="mySysOrgMap">
+        select  ORG.id_ as org_id,ORG.org_name,ORGS.person,ORGS.tel_phone,ORGS.zip_code,ORGS.address
+        from  sys_org ORG, sys_org_setting ORGS where ORG.org_code=#{orgCode}
+        and ORG.org_code = ORGS.org_code
+    </select>
+    <select id="selectByCustomCode" resultMap="sysOrgMap">
+    select o.* from sys_org o left join sys_org_setting os on o.org_code=os.org_code
+    where os.cust_code=#{custcode}
+
+    </select>
+    <resultMap id="refundOrgCount" type="io.renren.modules.zd.vo.RefundOrgCountVO">
+        <result column="org_code" property="orgCode"/>
+        <result column="org_name" property="orgName"/>
+        <result column="resource_count" property="resourceCount" />
+    </resultMap>
+    <select id="listAll" resultMap="refundOrgCount">
+         select o.* from sys_org o
+          inner join sys_org_setting os on o.org_code=os.org_code
+
+         where 1=1
+          <if test="params.salesmancode!=null and params.salesmancode!=''">
+              and os.salesmancode=#{params.salesmancode}
+          </if>
+        <if test="params.orgType!=null and params.orgType!=''">
+            and o.org_type=#{params.orgType}
+        </if>
+        <if test="params.parentCode!=null and params.parentCode!=''">
+            and find_in_set(#{params.parentCode},o.parent_codes)
+        </if>
+
+    </select>
+
+    <resultMap id="zdOrderOrgVOMap" extends="sysOrgMap" type="io.renren.modules.zd.vo.ZdOrderOrgVO">
+            <result column="resource_count" property="resourceCount"/>
+    </resultMap>
+    <select id="listOrderOrg" resultMap="zdOrderOrgVOMap">
+         SELECT SUM(IFNULL(o_t.order_num,0))resource_count,o_t.from_org_code,so.*
+         FROM sys_org so
+         left join
+         (
+        SELECT r.*, IFNULL(SUM(zor.order_num),0)order_num,
+        GROUP_CONCAT(zor.id_)ids,zo.`from_org_code`,zo.semester_code
+        FROM zd_order_resource zor
+        LEFT JOIN zd_order zo ON zo.id_=zor.order_id
+        LEFT JOIN zd_major_course_resource zmcr ON zmcr.id_=zor.zmcr_id
+        LEFT JOIN subject_resource r ON zmcr.resource_code=r.resource_code
+        left join sys_org org on org.org_code=zo.from_org_code
+        WHERE 1=1
+        AND find_in_set(#{params.orgCode},org.parent_codes)
+        <!--AND zo.to_org_code=#{params.orgCode}  -->
+        AND zo.status='3'
+        AND zo.semester_code=#{params.semesterCode}
+        AND zmcr.resource_code IS NOT NULL
+        AND  NOT EXISTS(SELECT * FROM zd_source_order_resource zsor
+        WHERE zsor.`order_resource_id`=zor.id_)
+        GROUP BY zo.`from_org_code`,zmcr.resource_code,zo.semester_code
+        <!-- SELECT SUM(zor.`order_num`)order_num,om.resource_code,o.semester_code,o.`from_org_code`
+          FROM zd_order o
+          LEFT JOIN zd_order_resource zor ON o.id_=zor.order_id
+          left join zd_major_course_resource om on om.id_=zor.zmcr_id
+          left join sys_org_setting os on os.org_code=o.to_org_code
+          WHERE 1=1 AND o.status in ('3','4') AND o.semester_code=#{params.semesterCode}
+          AND find_in_set(#{params.orgCode},o.to_org_code)
+        <if test="params.usercode!=null and params.usercode!=''">
+            and os.usercode=#{params.usercode}
+        </if>
+          GROUP BY o.`from_org_code`,om.resource_code,o.semester_code-->
+          )
+          o_t on o_t.from_org_code=so.org_code
+          WHERE 1=1 AND find_in_set(#{params.orgCode},so.parent_codes)
+          GROUP BY o_t.from_org_code
+        having SUM(IFNULL(o_t.order_num,0))>0
+           ORDER BY o_t.from_org_code
+
+
+    </select>
+
+    <resultMap id="StatisticsBalanceVoMap" type="io.renren.modules.zd.vo.StatisticProvinceBalanceVO">
+        <result property="orgCode" column="org_code"/>
+        <result property="orgName" column="org_name"/>
+        <result property="totalPay" column="total_pay"/>
+        <result property="needPay" column="need_pay"/>
+        <result property="totalShiyang" column="total_shiyang"/>
+    </resultMap>
+    <select id="selectStatisticsBalanceByMap" resultMap="StatisticsBalanceVoMap">
+
+        SELECT o.org_code,o.org_name,SUM(b.shiyang)total_shiyang,IFNULL(SUM(bp.pay_money),0)total_pay,(SUM(b.shiyang)-IFNULL(SUM(bp.pay_money),0))need_pay
+
+         FROM zd_balance_company b
+        LEFT JOIN zd_balance_company_pay bp ON b.id_=bp.`balance_company_id`
+	LEFT JOIN sys_org o ON o.org_code=b.to_org_code
+        WHERE b.`balance_status`='0'
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            AND b.`semester_code`=#{params.semesterCode}
+        </if>
+        GROUP BY b.to_org_code
+
+    </select>
+    <resultMap id="StatisticsTOPVoMap" type="io.renren.modules.zd.vo.StatisticProvinceTOPVO">
+        <result property="orgCode" column="org_code"/>
+        <result property="orgName" column="org_name"/>
+        <result property="totalOrderNum" column="total_order_num"/>
+        <result property="totalPublishNum" column="total_publish_num"/>
+        <result property="totalRefundNum" column="total_refund_num"/>
+        <result property="totalSourceNum" column="total_source_num"/>
+        <result property="mayang" column="mayang"/>
+        <result property="shiyang" column="shiyang"/>
+    </resultMap>
+    <select id="selectStatisticsTOPByMap" resultMap="StatisticsTOPVoMap">
+
+        SELECT o.org_name,o.org_code,IFNULL(z_o.total_order_num,0)total_order_num,IFNULL(z_p.total_publish_num,0)total_publish_num,
+        IFNULL(z_s.total_source_num,0)total_source_num,
+        IFNULL(z_r.total_refund_num,0)total_refund_num,
+        z_p.mayang,z_p.shiyang FROM sys_org o
+        LEFT JOIN
+        (
+        SELECT SUM(zor.`order_num`)total_order_num,o.to_org_code,o.`semester_code`
+        FROM zd_order o
+        LEFT JOIN zd_order_resource zor ON o.id_=zor.`order_id`
+        WHERE o.`status`='3'
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            and o.semester_code=#{params.semesterCode}
+        </if>
+        GROUP BY o.`to_org_code`
+        )z_o ON z_o.to_org_code=o.org_code
+        LEFT JOIN
+        (
+        SELECT SUM(pr.publish_num)total_publish_num,p.`from_org_code`,p.`semester_code`,
+        sum(pr.mayng)mayang,sum(pr.shiyang)shiyang
+        FROM zd_publish p LEFT JOIN zd_publish_resource pr ON p.id_=pr.`publish_id`
+        WHERE (p.`status`='3' OR p.`status`='4')
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            and p.semester_code=#{params.semesterCode}
+        </if>
+        GROUP BY p.`from_org_code`
+
+        )z_p ON z_p.from_org_code=o.org_code
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            and z_p.semester_code=z_o.semester_code
+        </if>
+        LEFT JOIN
+        (
+        SELECT SUM(sr.`source_num`)total_source_num,s.`org_code`,s.semester_code FROM zd_source s LEFT JOIN zd_source_resource sr ON s.id_=sr.`source_id`
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            and s.semester_code=#{params.semesterCode}
+        </if>
+        GROUP BY s.`org_code`
+
+        )z_s ON z_s.org_code=o.org_code
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            and z_s.semester_code=z_o.semester_code
+        </if>
+        LEFT JOIN
+        (SELECT SUM(zr.`refund_num`)total_refund_num,r.semester_code,r.`from_org_code` FROM zd_refund r LEFT JOIN zd_refund_resource zr ON r.id_=zr.`refund_id`
+        WHERE (r.`status`='3' OR r.`status`='4')
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            and r.semester_code=#{params.semesterCode}
+        </if>
+        GROUP BY r.`from_org_code`)z_r ON z_r.from_org_code=o.org_code
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            and z_r.semester_code=z_o.semester_code
+        </if>
+        WHERE o.org_type='1'
+        order by total_order_num desc
+        <if test="params.top!=null and params.top!=''">
+            limit ${params.top}
+        </if>
+
+    </select>
+    <select id="selectStatisticsCountryTOPByMap" resultMap="StatisticsTOPVoMap">
+
+        SELECT o.org_name,o.org_code,IFNULL(z_o.total_order_num,0)total_order_num,IFNULL(z_p.total_publish_num,0)total_publish_num,
+        IFNULL(z_s.total_source_num,0)total_source_num,IFNULL(z_r.total_refund_num,0)total_refund_num,z_p.mayang,z_p.shiyang
+        FROM sys_org o
+        LEFT JOIN
+        (
+        SELECT SUM(zor.`order_num`)total_order_num,o.from_Org_Code,o.`semester_code`
+        FROM zd_order o
+        LEFT JOIN zd_order_resource zor ON o.id_=zor.`order_id`
+        WHERE o.`status`='3'
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            and o.semester_code=#{params.semesterCode}
+        </if>
+        <if test="params.fromOrgCode!=null and params.fromOrgCode!=''">
+            and o.from_Org_Code=#{params.fromOrgCode}
+        </if>
+        <if test="params.toOrgCode!=null and params.toOrgCode!=''">
+            and o.to_Org_Code=#{params.toOrgCode}
+        </if>
+        GROUP BY o.`from_org_code`
+        )z_o ON z_o.from_Org_Code=o.org_code
+        LEFT JOIN
+        (
+        SELECT SUM(pr.publish_num)total_publish_num,p.`to_org_code`,p.`semester_code`,
+        sum(pr.mayng)mayang,sum(pr.shiyang)shiyang
+        FROM zd_publish p LEFT JOIN zd_publish_resource pr ON p.id_=pr.`publish_id`
+        WHERE p.`status`='3' OR p.`status`='4'
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            and p.semester_code=#{params.semesterCode}
+        </if>
+        <if test="params.fromOrgCode!=null and params.fromOrgCode!=''">
+            and p.to_Org_Code=#{params.fromOrgCode}
+        </if>
+        <if test="params.toOrgCode!=null and params.toOrgCode!=''">
+            and p.from_Org_Code=#{params.toOrgCode}
+        </if>
+        GROUP BY p.`to_org_code`
+
+        )z_p ON z_p.to_org_code=o.org_code
+        LEFT JOIN
+        (
+        SELECT SUM(sr.`source_num`)total_source_num,s.`to_org_code` FROM zd_source s LEFT JOIN zd_source_resource sr ON s.id_=sr.`source_id`
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            and s.semester_code=#{params.semesterCode}
+        </if>
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            and s.semester_code=#{params.semesterCode}
+        </if>
+        <if test="params.fromOrgCode!=null and params.fromOrgCode!=''">
+            and s.to_Org_Code=#{params.fromOrgCode}
+        </if>
+        <if test="params.toOrgCode!=null and params.toOrgCode!=''">
+            and s.org_code=#{params.toOrgCode}
+        </if>
+        GROUP BY s.`to_org_code`
+
+        )z_s ON z_s.to_org_code=o.org_code
+
+        LEFT JOIN
+        (SELECT SUM(zr.`refund_num`)total_refund_num,r.`from_org_code`
+        FROM zd_refund r LEFT JOIN zd_refund_resource zr ON r.id_=zr.`refund_id`
+        WHERE (r.`status`='3' OR r.`status`='4')
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            and r.semester_code=#{params.semesterCode}
+        </if>
+        <if test="params.fromOrgCode!=null and params.fromOrgCode!=''">
+            and r.from_Org_Code=#{params.fromOrgCode}
+        </if>
+        <if test="params.toOrgCode!=null and params.toOrgCode!=''">
+            and r.to_org_code=#{params.toOrgCode}
+        </if>
+        GROUP BY r.`from_org_code`)z_r ON z_r.from_org_code=o.org_code
+        WHERE o.org_type='3'
+        and find_in_set(#{params.toOrgCode},o.parent_codes)
+
+        order by total_order_num desc
+        <if test="params.top!=null and params.top!=''">
+            limit ${params.top}
+        </if>
+    </select>
+    <select id="selectStatisticsBalanceCountryByMap"
+           resultMap="StatisticsBalanceVoMap">
+        SELECT o.org_code,o.org_name,SUM(b.actual_total)total_shiyang,IFNULL(SUM(bp.sum),0)total_pay,(SUM(b.actual_total)-IFNULL(SUM(bp.sum),0))need_pay
+        FROM zd_balance b
+        LEFT JOIN zd_balance_pay bp ON b.id_=bp.`balance_id`
+        LEFT JOIN sys_org o ON o.org_code=b.low_level_org
+        WHERE b.`balance_status`='0'
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            AND b.`semester_code`=#{params.semesterCode}
+        </if>
+        <if test="params.highLevelOrg!=null and params.highLevelOrg!=''">
+            AND b.`high_Level_Org`=#{params.highLevelOrg}
+        </if>
+        <if test="params.lowLevelOrg!=null and params.lowLevelOrg!=''">
+            AND b.`low_level_org`=#{params.lowLevelOrg}
+        </if>
+        GROUP BY b.low_level_org
+
+    </select>
+    <resultMap id="orderOrgCountMap" type="io.renren.modules.zd.vo.OrderOrgCount">
+        <result property="orderCount" column="order_count"/>
+        <result property="orgCode" column="org_Code"/>
+        <result property="orgName" column="org_Name"/>
+
+    </resultMap>
+    <select id="selectOrderList" resultMap="orderOrgCountMap">
+
+      SELECT o.org_code,o.org_name,b.order_count FROM sys_org o
+
+         inner JOIN
+
+       (
+       SELECT COUNT(0)order_count,from_org_code FROM zd_order a
+       where a.semester_code=#{params.semesterCode}
+        GROUP BY from_org_code
+        ) b ON
+        o.org_code=b.`from_org_code`
+          WHERE   FIND_IN_SET(#{params.orgCode},o.parent_codes)
+
+    </select>
+    <select id="selectNotOrderList" resultMap="orderOrgCountMap">
+SELECT o.*,'0' AS order_count FROM sys_org o WHERE
+          o.`org_code` NOT IN  (
+           SELECT a.`org_code` FROM zd_order a
+           INNER JOIN sys_org so ON a.org_code=so.`org_code`
+           AND  FIND_IN_SET(#{params.orgCode},so.parent_codes) AND so.parent_codes IS NOT NULL  AND a.semester_code=#{params.semesterCode}
+           GROUP BY a.`org_code`
+           )
+          AND  FIND_IN_SET(#{params.orgCode},o.parent_codes)
+
+          </select>
+    <resultMap type="io.renren.modules.sys.vo.SysOrgVO" id="voMap" extends="sysOrgMap">
+         <result property="address" column="address" />
+         <result property="zipCode" column="zipCode" />
+         <result property="person" column="person" />
+         <result property="mobile" column="mobile" />
+         <result property="toOrgCode" column="to_org_code" />
+    </resultMap>
+
+
+    <select id="selectVOByOrgCode"  resultMap="voMap">
+         select o.*,os.zip_code,os.address,os.tel_phone mobile,os.person,os.to_org_code from sys_org o left join sys_org_setting os on o.org_code=os.org_code
+         where o.org_code=#{orgCode}
+    </select>
+    <select id="selectByType" resultMap="sysOrgMap">
+
+        select o.* from sys_org o
+        where o.org_type=#{orgType}
+    </select>
+    <select id="selectChildrenByPId" resultMap="sysOrgMap">
+            SELECT IF(a.childCount>0,1,0)is_parent,o.* FROM sys_org o
+            left JOIN (SELECT parent_id,COUNT(0)childCount FROM sys_org
+            GROUP BY parent_id )a ON a.parent_id=o.id_
+            where o.parent_id=#{pid}
+            GROUP BY o.org_code
+    </select>
+    <select id="selectChildrenById" resultMap="sysOrgMap">
+            SELECT IF(a.childCount>0,1,0)is_parent,o.* FROM sys_org o
+            left JOIN (SELECT parent_id,COUNT(0)childCount FROM sys_org
+            GROUP BY parent_id )a ON a.parent_id=o.id_
+            where o.id_=#{id}
+            GROUP BY o.org_code
+    </select>
+</mapper>

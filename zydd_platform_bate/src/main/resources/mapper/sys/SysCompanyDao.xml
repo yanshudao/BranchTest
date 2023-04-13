@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.sys.dao.SysCompanyDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.sys.entity.SysCompanyEntity" id="sysCompanyMap">
+        <result property="id" column="id_"/>
+        <result property="companyName" column="company_name"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="companyType" column="company_type"/>
+        <result property="createTime" column="create_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="zipCode" column="zip_code"/>
+        <result property="salary" column="salary"/>
+        <result property="addr" column="addr"/>
+        <result property="tel" column="tel"/>
+        <result property="person" column="person"/>
+        <result property="enable" column="enable_"/>
+        <result property="remark" column="remark_"/>
+    </resultMap>
+    <select id="selectListPage" resultMap="sysCompanyMap">
+      select c.* from sys_company c
+      where 1=1
+        and  c.org_code=#{params.orgCode}
+      <if test="params.companyType!=null and params.companyType!=''">
+          and c.company_Type=#{params.companyType}
+      </if>
+        <if test="params.companyName!=null and params.companyName!=''">
+            and c.company_Name like concat('%',#{params.companyName},'%')
+        </if>
+
+    </select>
+    <select id="selectAllByMap" resultMap="sysCompanyMap">
+        select c.* from sys_company c
+        where 1=1
+        and (find_in_set(c.org_code,#{params.parentCodes}) or c.org_code=#{params.orgCode})
+        <if test="params.companyType!=null and params.companyType!=''">
+            and c.company_Type=#{params.companyType}
+        </if>
+        <if test="params.companyName!=null and params.companyName!=''">
+            and c.company_Name like concat('%',#{params.companyName},'%')
+        </if>
+        and (find_in_set(c.org_code,#{params.parentCodes}) or c.org_code=#{params.orgCode})
+        order by c.create_time
+    </select>
+
+</mapper>

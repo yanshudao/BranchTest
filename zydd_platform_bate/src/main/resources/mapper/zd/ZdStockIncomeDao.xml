@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.zd.dao.ZdStockIncomeDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.zd.entity.ZdStockIncomeEntity" id="zdStockIncomeMap">
+        <result property="id" column="id_"/>
+        <result property="incomeSn" column="income_sn"/>
+        <result property="incomeName" column="income_name"/>
+        <result property="companyId" column="company_id"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="semesterCode" column="semester_code"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="status" column="status"/>
+        <result property="delFlag" column="del_flag"/>
+        <result property="enable" column="enable_"/>
+        <result property="remark" column="remark_"/>
+        <result property="erpcode" column="erpcode"/>
+        <result property="carrierno" column="carrierno"/>
+        <result property="num" column="num"/>
+        <result property="sendDate" column="send_date"/>
+    </resultMap>
+    <resultMap type="io.renren.modules.zd.vo.ZdStockIncomeVO" extends="zdStockIncomeMap" id="zdSourceIncomeVOMap">
+        <result property="totalNum" column="totalNum"/>
+        <result property="resourceNum" column="resourceNum"/>
+        <result property="realname" column="realname"/>
+        <result property="companyName" column="company_name"/>
+        <result property="orgName" column="org_name"/>
+        <result property="mayang" column="mayang"/>
+        <result property="shiyang" column="shiyang"/>
+        <result property="publishStatus" column="publish_status"/>
+    </resultMap>
+    <select id="selectListPage" resultMap="zdSourceIncomeVOMap">
+        SELECT a.*,COUNT(sr.`resource_id`) resourceNum,SUM(sr.`income_num`) totalNum,u.`realname`,c.company_name,
+        sum(sr.mayang)mayang,sum(sr.mayang)shiyang,
+        o.`org_name`,if(p.id_ is not null,1,0)publish_status
+         FROM zd_stock_income a
+        LEFT JOIN zd_stock_income_resource sr ON a.id_=sr.income_id
+        LEFT JOIN sys_user u ON u.user_id=a.`create_by`
+        left join sys_company c on c.id_=a.company_id
+        LEFT JOIN sys_org o ON a.`to_org_code`=o.`org_code`
+        left join zd_publish p on p.foreign_id=a.id_ and p.source_type='income'
+        where 1=1
+        <if test="params.incomeSn!=null and params.incomeSn!=''">
+            and (a.income_Sn like concat('%',#{params.incomeSn},'%') or
+            a.income_name like concat('%',#{params.incomeSn},'%'))
+        </if>
+         <if test="params.carrierno!=null and params.carrierno!=''">
+            and a.carrierno like concat('%',#{params.carrierno},'%')
+        </if>
+        <if test="params.supplierId!=null and params.supplierId!=''">
+            and a.company_id=#{params.supplierId}
+        </if>
+        <if test="params.orgCode!=null and params.orgCode!=''">
+            and a.org_code=#{params.orgCode}
+        </if>
+        <if test="params.toOrgCode!=null and params.toOrgCode!=''">
+            and a.to_org_code=#{params.toOrgCode}
+        </if>
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            and a.semester_code=#{params.semesterCode}
+        </if>
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            and a.semester_code=#{params.semesterCode}
+        </if>
+        <if test="params.notEqStatus!=null and params.notEqStatus!=''">
+            and a.status!=#{params.notEqStatus}
+        </if>
+        <if test="params.status!=null and params.status!=''">
+            and a.status=#{params.status}
+        </if>
+GROUP BY a.id_
+order by a.send_date desc,a.create_time desc
+    </select>
+    <select id="countByMap" resultType="java.lang.Integer">
+        select count(0) from zd_stock_income
+        where status=#{params.status} and id_ in
+        <foreach collection="params.ids" open="(" close=")" separator="," item="item">
+            #{item}
+        </foreach>
+
+    </select>
+
+    <resultMap id="zdRefundBalanceVOMap" type="io.renren.modules.zd.vo.ZdBalancePriceVO">
+        <result column="mayang" property="mayang" />
+        <result column="shiyang" property="shiyang" />
+
+    </resultMap>
+    <select id="getIncomePrice" resultMap="zdRefundBalanceVOMap">
+
+          select sum(si.mayang) mayang,sum(si.shiyang)shiyang from
+          zd_stock_income_resource si
+          left join zd_stock_income s on si.income_id=s.id_
+          where s.id_ IN
+        <foreach collection="list" item="item" separator="," close=")" open="(">#{item.id}</foreach>
+    </select>
+    <select id="selectByForeignId" resultMap="zdStockIncomeMap">
+        select * from zd_stock_income
+        where foreign_id=#{foreignId}
+
+    </select>
+
+    <resultMap type="io.renren.modules.zd.vo.ZdBalanceIncomeDetailVO" extends="io.renren.modules.zd.dao.ZdStockIncomeResourceDao.zdStockIncomeResourceMap"
+               id="zdBalanceIncomeDetailVOMap">
+        <result property="resourceCode" column="resource_code"/>
+        <result property="resourceName" column="resource_name"/>
+        <result property="resourceType" column="resource_type"/>
+        <result property="price" column="price"/>
+        <result property="resourceVersion" column="resource_version"/>
+        <result property="totalNum" column="total_num"/>
+        <result property="totalMayang" column="total_mayang"/>
+        <result property="totalShiyang" column="total_shiyang"/>
+        <result property="nitemdiscountrate" column="nitemdiscountrate"/>
+        <result property="erpcode" column="erpcode"/>
+        <result property="incomeCreateTime" column="income_Create_Time"/>
+    </resultMap>
+    <select id="queryBalanceIncomeDetail" resultMap="zdBalanceIncomeDetailVOMap">
+         select a.*,ci.create_time income_Create_Time,ci.erpcode,r.resource_code,r.resource_name,
+        r.resource_version,r.resource_type,r.price,sum(a.income_num)total_num,
+         sum(a.mayang)total_mayang,
+        sum(a.shiyang)total_shiyang,
+        avg(a.nitemdiscountrate)nitemdiscountrate
+         from
+         zd_balance_company bc
+         left join zd_balance_company_income zbci on bc.id_=zbci.balance_company_id
+         left join zd_stock_income_resource a on zbci.income_id=a.income_id
+         left join zd_stock_income ci on ci.id_=a.income_id
+        left join subject_resource r on a.resource_id=r.id_
+            where bc.semester_code=#{semesterCode}
+        and ci.org_code=#{orgCode}
+        and bc.company_id=#{companyId}
+            <if test="balanceId!=null and balanceId!=''">
+                and bc.id_=#{balanceId}
+            </if>
+            group by bc.semester_code,ci.org_code,bc.company_id,a.resource_id
+
+    </select>
+    <select id="getRefundLimitInfo" resultType="io.renren.modules.zd.vo.RefundLimitInfoVO">
+        SELECT  IFNULL(a.mayang,0) totalPublishMayang,
+        IFNULL(b.mayang,0)auditRefundMayang,
+        ifnull(z_cat.total_cat,0)refundTotal
+        FROM (
+        SELECT IFNULL(SUM(sir.`mayang`),0)mayang,si.org_code FROM zd_stock_income_resource sir
+        LEFT JOIN zd_stock_income si ON si.id_=sir.`income_id`
+        WHERE si.`semester_code` in
+        <foreach collection="semesterList" item="item" close=")" open="(" separator=",">
+            #{item.semesterCode}
+        </foreach>
+
+        AND si.`org_code`=#{orgCode}
+        ) a
+        LEFT JOIN
+        (
+        SELECT IFNULL(SUM(zrsr.mayang),0)mayang,zrs.`org_code` FROM zd_refund_supplier zrs
+        LEFT JOIN zd_refund_supplier_resource zrsr ON zrs.id_=zrsr.refund_supplier_id
+        WHERE zrs.`semester_code` in
+        <foreach collection="semesterList" item="item" close=")" open="(" separator=",">
+            #{item.semesterCode}
+        </foreach>
+        AND zrs.`org_code`=#{orgCode}
+        )b ON a.org_code=b.org_code
+        LEFT JOIN
+        (
+
+        SELECT rc.org_code,SUM(rc.cat_num*r.price)total_cat,rc.resource_id
+        FROM zd_refund_cart rc
+        left join subject_resource r on rc.resource_id=r.id_
+        where rc.org_code=#{orgCode}
+        )z_cat ON a.org_code=z_cat.org_code
+
+    </select>
+    <select id="getRefundLimitInfo2" resultType="io.renren.modules.zd.vo.RefundLimitInfoVO">
+
+        SELECT  IFNULL(a.mayang,0) totalPublishMayang,
+        IFNULL(b.mayang,0)auditRefundMayang,
+        ifnull(z_cat.total_cat,0)refundTotal
+        FROM (
+        SELECT IFNULL(SUM(sir.`mayang`),0)mayang,si.org_code
+        FROM zd_stock_income_resource sir
+        LEFT JOIN zd_stock_income si ON si.id_=sir.`income_id`
+        WHERE si.`semester_code` =#{semesterCode}
+        AND si.`org_code`=#{orgCode} and si.company_id=#{supplierId}
+        ) a
+        LEFT JOIN
+        (
+        SELECT IFNULL(SUM(zrsr.mayang),0)mayang,zrs.`org_code`
+        FROM zd_refund_supplier zrs
+        LEFT JOIN zd_refund_supplier_resource zrsr ON zrs.id_=zrsr.refund_supplier_id
+        WHERE zrs.`refund_semester_code`=#{semesterCode}
+        AND zrs.`org_code`=#{orgCode} and zrs.supplier_id=#{supplierId}
+        )b ON a.org_code=b.org_code
+        LEFT JOIN
+        (
+        SELECT rc.org_code,SUM(rc.cat_num*r.price)total_cat,rc.resource_id
+        FROM zd_refund_cart rc
+        left join subject_resource r on rc.resource_id=r.id_
+        where rc.org_code=#{orgCode} and rc.refund_semester_code=#{semesterCode}
+        and rc.supplier_id=#{supplierId}
+        )z_cat ON a.org_code=z_cat.org_code
+
+    </select>
+
+
+</mapper>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.zd.dao.ZdSourceCartDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.zd.entity.ZdSourceCartEntity" id="zdSourceCatMap">
+        <result property="id" column="id"/>
+        <result property="resourceId" column="resource_id"/>
+        <result property="newResourceId" column="new_resource_id"/>
+        <result property="status" column="status"/>
+        <result property="num" column="num"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="orgCode" column="org_code"/>
+    </resultMap>
+    <resultMap extends="zdSourceCatMap" id="zdSourceCartVOMap" type="io.renren.modules.zd.vo.ZdSourceCartVO">
+        <result property="resourceCode" column="resource_code"/>
+        <result property="resourceName" column="resource_name"/>
+        <result property="resourceType" column="resource_type"/>
+        <result property="price" column="price"/>
+    </resultMap>
+    <select id="selectAll" resultType="io.renren.modules.zd.vo.ZdSourceCartVO">
+            select c.*,r.resource_name,r.resource_type,r.price,r.resource_code
+             from zd_source_cart c
+            left join subject_resource r on c.resource_id=r.id_
+            where 1=1
+            <if test="params.createBy!=null and params.createBy!=''">
+                and c.create_by=#{params.createBy}
+            </if>
+            <if test="params.semesterCode!=null and params.semesterCode!=''">
+                and c.semester_code=#{params.semesterCode}
+            </if>
+            order by c.create_time desc
+    </select>
+
+
+</mapper>

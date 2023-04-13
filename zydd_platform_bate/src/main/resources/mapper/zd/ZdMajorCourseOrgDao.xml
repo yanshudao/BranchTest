@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.zd.dao.ZdMajorCourseOrgDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.zd.entity.ZdMajorCourseOrg" id="zdZmcrOrgMap">
+        <result property="id" column="id"/>
+        <result property="majorCode" column="major_code"/>
+        <result property="majorType" column="major_type"/>
+        <result property="courseCode" column="course_code"/>
+        <result property="studentType" column="student_type"/>
+        <result property="subjectType" column="subject_type"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+    <resultMap id="zdZmcrOrgVOMap" extends="zdZmcrOrgMap" type="io.renren.modules.zd.vo.ZdMajorCourseOrgVO">
+        <result property="majorName" column="major_name"/>
+        <result property="courseName" column="course_name"/>
+        <result property="orgName" column="org_name"/>
+    </resultMap>
+    <update id="deleteChildren">
+update
+	zd_major_course_org
+	set del_flag=-1
+WHERE
+	id IN (
+SELECT
+	*
+FROM
+	(
+SELECT
+	id
+FROM
+	zd_major_course_org a
+WHERE
+	EXISTS (
+SELECT
+	major_code,
+	major_type,
+	student_type,
+	course_code
+FROM
+	zd_major_course_org zmc
+WHERE
+	id IN
+	<foreach collection="ids" separator="," open="(" close=")" item="item" >
+        #{item}
+    </foreach>
+	AND a.major_code = zmc.major_code
+	AND a.major_type = zmc.major_type
+	AND a.student_type = zmc.student_type
+	AND a.course_code = zmc.course_code
+	)
+	AND a.org_code IN
+        <foreach collection="orgCodes" separator="," open="(" close=")" item="item" >
+            #{item}
+        </foreach>
+
+	) d
+	)
+
+    </update>
+    <select id="selectPageList" resultMap="zdZmcrOrgVOMap">
+        SELECT zmcr.major_code,zmcr.semester_code,
+        zmcr.major_type,zmcr.student_type,zmcr.course_code,zmcr.subject_type,
+        c.course_name,m.major_name,o.org_name,zmcr.org_code
+        FROM zd_major_course_resource zmcr
+        LEFT JOIN subject_major_base m ON m.major_code=zmcr.`major_code`
+        LEFT JOIN subject_course c ON c.`course_code`=zmcr.`course_code`
+        LEFT JOIN sys_org o ON o.`org_code`=zmcr.`org_code`
+        WHERE zmcr.`semester_code`=#{params.semesterCode}
+        <if test="params.majorName!=null and params.majorName!=''">
+            and (
+            zmcr.major_code like concat('%',#{params.majorName},'%')
+            or m.major_name like concat('%',#{params.majorName},'%')
+            )
+        </if>
+
+        <if test="params.courseName!=null and params.courseName!=''">
+            and (
+            zmcr.course_code like concat('%',#{params.courseName},'%')
+            or c.course_name like concat('%',#{params.courseName},'%')
+            )
+        </if>
+        <if test="params.subjectType!=null and params.subjectType!=''">
+            and zmcr.subject_type=#{params.subjectType}
+        </if>
+        <if test="params.majorType!=null and params.majorType!=''">
+            and zmcr.major_type=#{params.majorType}
+        </if>
+        <if test="params.studentType!=null and params.studentType!=''">
+            and zmcr.student_type=#{params.studentType}
+        </if>
+        AND (zmcr.org_code=#{params.orgCode} OR FIND_IN_SET(zmcr.org_code,#{params.parentOrgCodes}))
+
+        AND EXISTS (
+        SELECT id FROM zd_major_org zmo
+        WHERE zmo.`major_code`=zmcr.`major_code`
+        AND zmo.`major_type`=zmcr.`major_type`
+        AND zmo.`student_type`=zmcr.`student_type`
+        AND zmo.`semester_code`=zmcr.`semester_code`
+        AND zmo.`subject_type`=zmcr.`subject_type`
+        AND (zmo.to_org_code=#{params.orgCode}
+        OR FIND_IN_SET(zmo.to_org_code,#{params.parentOrgCodes}))
+        )
+        AND NOT EXISTS (
+        SELECT id FROM zd_major_org_disable zmo
+        WHERE zmo.`major_code`=zmcr.`major_code`
+        AND zmo.`major_type`=zmcr.`major_type`
+        AND zmo.`student_type`=zmcr.`student_type`
+        AND zmo.`semester_code`=zmcr.`semester_code`
+        AND zmo.`subject_type`=zmcr.`subject_type`
+        AND (zmo.to_org_code=#{params.orgCode} OR FIND_IN_SET(zmo.to_org_code,#{params.parentOrgCodes}))
+        )
+        AND NOT  EXISTS (
+        SELECT id FROM zd_major_course_org zmo
+        WHERE zmo.`major_code`=zmcr.`major_code`
+        AND zmo.`major_type`=zmcr.`major_type`
+        AND zmo.`student_type`=zmcr.`student_type`
+        AND zmo.`semester_code`=zmcr.`semester_code`
+        AND zmo.`subject_type`=zmcr.`subject_type`
+        AND zmo.`course_code`=zmcr.`course_code`
+        AND (zmo.to_org_code=#{params.orgCode} OR FIND_IN_SET(zmo.to_org_code,#{params.parentOrgCodes}))
+        )
+        GROUP BY zmcr.major_code,zmcr.semester_code,zmcr.major_type,zmcr.student_type,zmcr.course_code,zmcr.subject_type,zmcr.org_code
+
+       order by zmcr.major_code asc,zmcr.create_time desc
+
+    </select>
+
+
+    <select id="selectDisableList" resultMap="zdZmcrOrgVOMap">
+      SELECT zzo.*,m.major_name,c.`course_name`,o.`org_name`,toOrg.org_name toOrgName
+      FROM zd_major_course_org zzo
+   LEFT JOIN subject_major_base m ON zzo.`major_code`=m.`major_code`
+   LEFT JOIN subject_course c ON c.`course_code`=zzo.`course_code`
+   LEFT JOIN sys_org o ON o.`org_code`=zzo.`org_code`
+   left join sys_org toOrg on toOrg.org_code=zzo.to_org_code
+   WHERE  1=1 and zzo.semester_code=#{params.semesterCode}
+   and (zzo.to_org_code=#{params.orgCode} or find_in_set(zzo.to_org_code,#{params.parentOrgCodes}))
+    <if test="params.majorName!=null and params.majorName!=''">
+        and (
+        m.major_code like concat('%',#{params.majorName},'%')
+           or m.major_name like concat('%',#{params.majorName},'%')
+        )
+    </if>
+
+    <if test="params.courseName!=null and params.courseName!=''">
+        and (
+        zzo.course_code like concat('%',#{params.courseName},'%')
+        or c.course_name like concat('%',#{params.courseName},'%')
+        )
+    </if>
+    <if test="params.subjectType!=null and params.subjectType!=''">
+        and zzo.subject_type=#{params.subjectType}
+    </if>
+    <if test="params.majorType!=null and params.majorType!=''">
+        and zzo.major_type=#{params.majorType}
+    </if>
+    <if test="params.studentType!=null and params.studentType!=''">
+        and zzo.student_type=#{params.studentType}
+    </if>
+        order by zzo.create_time desc
+    </select>
+    <select id="selectZMCRList" resultMap="zdZmcrOrgVOMap">
+ select a.* from (
+ SELECT zmcr.major_code,zmcr.semester_code,zmcr.major_type,zmcr.student_type,zmcr.course_code,zmcr.subject_type,
+ m.major_name,c.course_name
+ FROM zd_major_course_resource zmcr
+ left join subject_major_base m on m.major_code=zmcr.major_code
+ left join subject_course c on c.course_code=zmcr.course_code
+    WHERE zmcr.semester_code=#{params.semesterCode}
+      and (zmcr.org_code=#{params.orgCode} or find_in_set(zmcr.org_code,#{params.parentOrgCodes}))
+        <if test="params.majorName!=null and params.majorName!=''">
+            and (
+            zmcr.major_code like concat('%',#{params.majorName},'%')
+            or m.major_name like concat('%',#{params.majorName},'%')
+            )
+        </if>
+
+        <if test="params.courseName!=null and params.courseName!=''">
+            and (
+            zmcr.course_code like concat('%',#{params.courseName},'%')
+            or c.course_name like concat('%',#{params.courseName},'%')
+            )
+        </if>
+        <if test="params.subjectType!=null and params.subjectType!=''">
+            and zmcr.subject_type=#{params.subjectType}
+        </if>
+        <if test="params.majorType!=null and params.majorType!=''">
+            and zmcr.major_type=#{params.majorType}
+        </if>
+        <if test="params.studentType!=null and params.studentType!=''">
+            and zmcr.student_type=#{params.studentType}
+        </if>
+    GROUP BY zmcr.major_code,zmcr.major_type,zmcr.student_type,zmcr.course_code,zmcr.subject_type
+    )a
+    where not exists(
+     SELECT * FROM zd_major_course_org zmc
+      WHERE zmc.`course_code`=a.`course_code` AND zmc.`major_code`=a.`major_code`
+      AND zmc.`major_type`=a.`major_type` AND zmc.`student_type`=a.`student_type`
+       AND zmc.`org_code`=#{params.orgCode}
+       AND zmc.`semester_code`=#{params.semesterCode}
+       and zmc.del_flag=0
+    )
+
+    </select>
+    <select id="selectOpenCountryList" resultMap="zdZmcrOrgVOMap">
+        SELECT zzo.*,
+        (SELECT major_name FROM subject_major_base m WHERE m.major_code=zzo.major_code LIMIT 1)major_name,c.`course_name`,o.`org_name`
+        FROM zd_major_course_org zzo
+        LEFT JOIN subject_course c ON c.`course_code`=zzo.`course_code`
+        LEFT JOIN sys_org o ON o.`org_code`=zzo.`org_code`
+        WHERE 1=1 AND zzo.org_code=#{params.orgCode} and zzo.opt_type=#{params.optType}
+        and zzo.del_flag=0
+        <if test="params.majorName!=null and params.majorName!=''">
+            and (
+            m.major_code like concat('%',#{params.majorName},'%')
+            or m.major_name like concat('%',#{params.majorName},'%')
+            )
+        </if>
+
+        <if test="params.courseName!=null and params.courseName!=''">
+            and (
+            zzo.course_code like concat('%',#{params.courseName},'%')
+            or c.course_name like concat('%',#{params.courseName},'%')
+            )
+        </if>
+        <if test="params.subjectType!=null and params.subjectType!=''">
+            and zzo.subject_type=#{params.subjectType}
+        </if>
+        <if test="params.majorType!=null and params.majorType!=''">
+            and zzo.major_type=#{params.majorType}
+        </if>
+        <if test="params.studentType!=null and params.studentType!=''">
+            and zzo.student_type=#{params.studentType}
+        </if>
+
+        order by zzo.create_time desc
+    </select>
+    <insert id="selectInsert">
+  INSERT IGNORE INTO zd_major_course_org(
+    id,major_code,course_code,major_type,student_type,subject_type,org_code,to_org_code,semester_code,create_by,create_time)
+
+SELECT REPLACE(UUID(),'-',''),
+     zmo.major_code,zmo.course_code,zmo.major_type,zmo.student_type,zmo.subject_type,
+     zmo.org_code,zmo.to_org_code,#{insertMap.semesterCode},1,NOW() FROM zd_major_course_org zmo
+     LEFT JOIN sys_org o ON o.org_code=zmo.to_org_code
+     WHERE zmo.semester_code=#{insertMap.preSemesterCode}
+     AND (zmo.to_org_code=#{insertMap.orgCode} OR FIND_IN_SET(#{insertMap.orgCode} ,o.parent_codes))
+
+
+    </insert>
+
+
+</mapper>

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.subject.dao.SubjectMajorCourseDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.subject.entity.SubjectMajorCourseEntity" id="subjectMajorCourseMap">
+        <result property="id" column="id_"/>
+        <result property="courseId" column="course_id"/>
+        <result property="majorId" column="major_id"/>
+        <result property="nd" column="nd"/>
+        <result property="xqdm" column="xqdm"/>
+        <result property="orgId" column="org_id"/>
+        <result property="foreignId" column="foreign_id"/>
+        <result property="ruleNumber" column="rule_number"/>
+        <result property="studentType" column="student_type"/>
+        <result property="majorType" column="major_type"/>
+        <result property="moduleType" column="module_type"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="semesterCode" column="semester_code"/>
+        <result property="courseCode" column="course_code"/>
+        <result property="majorCode" column="major_code"/>
+        <result property="enable" column="enable_"/>
+        <result property="remark" column="remark_"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+    <delete id="deleteByCourseIds">
+        delete from subject_major_course where course_code in
+        (
+        select course_code from subject_course where id_ in
+        <foreach collection="ids" item="item" separator="," close=")" open="(">
+            #{item}
+        </foreach>
+        )
+    </delete>
+    <delete id="deleteByMajorIds">
+        delete mc.* from  subject_major_base m
+        LEFT JOIN subject_major_course mc ON m.major_code=mc.major_code
+        where m.id_ in
+        <foreach collection="ids" item="item" separator="," close=")" open="(">
+            #{item}
+        </foreach>
+
+    </delete>
+
+
+</mapper>

@@ -1,0 +1,526 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.zd.dao.ZdSemesterRegDao">
+
+
+    <select id="selectListPage" resultType="io.renren.modules.zd.entity.ZdSemesterRegEntity">
+        select * from zd_semester_reg a
+        where 1=1
+        <if test="params.custCode!=null and params.custCode!=''">
+            and a.cust_code=#{params.custCode}
+        </if>
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            and a.semester_code=#{params.semesterCode}
+        </if>
+    </select>
+    <select id="selectRate" resultType="io.renren.modules.zd.vo.ZdSemesterRegVO">
+      <if test="params.isClose==null">
+          select os.cust_code,
+          ifnull(a.order_total,0)order_total,
+          ifnull(b.source_total,0)+ifnull(xian_source.source_total,0)source_total,
+          ifnull(c.refund_total,0)refund_total,ifnull(d.refund_supplier_total,0)refund_supplier_total,
+          ifnull(e.stu_total,0)stu_total,ifnull(f.stock_income_total,0)stock_income_total
+          ,ifnull(g.publish_total,0)publish_total,
+          ifnull(o_cart.order_total,0)orderCartTotal
+          ,ifnull(s_cart.order_total,0)sourceCartTotal
+          from sys_org_setting os
+          left join (
+          select os.cust_code,ifnull(sum(cat_num),0)order_total
+          from zd_cart cart
+          left join sys_org_setting os on os.org_code=cart.org_code
+          left join subject_resource r on r.id_=cart.resource_id
+          left join zd_major_course_resource zmcr on zmcr.id_=cart.zmcr_id
+          where 1=1  and r.resource_type2='1'
+          <if test="params.custCode!=null and params.custCode!=''">
+              and os.cust_code=#{params.custCode}
+          </if>
+          <if test="params.majorCode!=null and params.majorCode!=''">
+              and zmcr.major_code=#{params.majorCode}
+          </if>
+          <if test="params.courseCode!=null and params.courseCode!=''">
+              and zmcr.course_code=#{params.courseCode}
+          </if>
+          <if test="params.majorType!=null and params.majorType!=''">
+              and zmcr.major_type=#{params.majorType}
+          </if>
+          <if test="params.studentType!=null and params.studentType!=''">
+              and zmcr.student_type=#{params.studentType}
+          </if>
+
+          group by os.cust_code
+          )o_cart on os.cust_code=o_cart.cust_code
+          left join (
+          select os.cust_code,ifnull(sum(num),0)order_total
+          from zd_source_cart cart
+          left join sys_org_setting os on os.org_code=cart.org_code
+          left join subject_resource r on r.id_=cart.resource_id
+          where 1=1  and r.resource_type2='1'
+          and cart.semester_code=#{params.semesterCode}
+          <if test="params.custCode!=null and params.custCode!=''">
+              and os.cust_code=#{params.custCode}
+          </if>
+          group by os.cust_code
+          )s_cart on os.cust_code=s_cart.cust_code
+          left join
+          (
+          select os.cust_code,ifnull(sum(order_num),0)order_total
+          from zd_order_resource  zor
+          left join zd_order o on zor.order_id=o.id_
+          left join sys_org_setting os on os.org_code=o.from_org_code
+          left join zd_major_course_resource zmcr on zmcr.id_=zor.zmcr_id
+          left join subject_resource r on r.id_=zor.resource_id
+          where o.semester_code=#{params.semesterCode}  and r.resource_type2='1'
+          <if test="params.custCode!=null and params.custCode!=''">
+              and os.cust_code=#{params.custCode}
+          </if>
+          <if test="params.majorCode!=null and params.majorCode!=''">
+              and zmcr.major_code=#{params.majorCode}
+          </if>
+          <if test="params.courseCode!=null and params.courseCode!=''">
+              and zmcr.course_code=#{params.courseCode}
+          </if>
+          <if test="params.majorType!=null and params.majorType!=''">
+              and zmcr.major_type=#{params.majorType}
+          </if>
+          <if test="params.studentType!=null and params.studentType!=''">
+              and zmcr.student_type=#{params.studentType}
+          </if>
+          group by os.cust_code
+          )a on a.cust_code=os.cust_code
+          left join (
+          select os.cust_code,ifnull(sum(source_num),0)source_total
+          from zd_source_resource sor
+          left join zd_source s on s.id_=sor.source_id
+          left join sys_org_setting os on os.org_code=s.to_org_code
+          left join subject_resource r on r.id_=sor.resource_id
+          where s.semester_code=#{params.semesterCode} and r.resource_type2='1'
+          <if test="params.custCode!=null and params.custCode!=''">
+              and os.cust_code=#{params.custCode}
+          </if>
+          <if test="params.majorCode!=null and params.majorCode!=''">
+              and exists (
+              select * from
+              zd_source_order_resource zsor
+              left join zd_order_resource zor on zor.id_=zsor.order_resource_id
+              left join zd_major_course_resource zmcr on zmcr.id_=zor.zmcr_id
+              where sor.id_=zsor.source_resource_id
+              <if test="params.majorCode!=null and params.majorCode!=''">
+                  and zmcr.major_code=#{params.majorCode}
+              </if>
+              <if test="params.courseCode!=null and params.courseCode!=''">
+                  and zmcr.course_code=#{params.courseCode}
+              </if>
+              <if test="params.majorType!=null and params.majorType!=''">
+                  and zmcr.major_type=#{params.majorType}
+              </if>
+              <if test="params.studentType!=null and params.studentType!=''">
+                  and zmcr.student_type=#{params.studentType}
+              </if>
+              )
+          </if>
+          group by os.cust_code
+          )xian_source on os.cust_code=xian_source.cust_code
+          left join (
+          select os.cust_code,ifnull(sum(source_num),0)source_total
+          from zd_source_resource sor
+          left join zd_source s on s.id_=sor.source_id
+          left join sys_org_setting os on os.org_code=s.org_code
+          left join subject_resource r on r.id_=sor.resource_id
+          where s.semester_code=#{params.semesterCode} and r.resource_type2='1'
+          <if test="params.custCode!=null and params.custCode!=''">
+              and os.cust_code=#{params.custCode}
+          </if>
+          group by os.cust_code
+          )b on os.cust_code=b.cust_code
+          left join
+          (
+
+          select os.cust_code,ifnull(sum(zrr.real_num),0)refund_total from zd_refund_resource zrr
+          left join zd_refund r on zrr.refund_id=r.id_
+          left join sys_org_setting os on os.org_code=r.org_code
+          left join subject_resource sr on sr.id_=zrr.resource_id
+          where r.semester_code=#{params.semesterCode} and sr.resource_type2='1'
+          <if test="params.custCode!=null and params.custCode!=''">
+              and os.cust_code=#{params.custCode}
+          </if>
+          group by os.cust_code
+          )c  on c.cust_code=os.cust_code
+          left join
+          (
+          select os.cust_code,ifnull(sum(zrr.real_num),0)refund_supplier_total
+          from zd_refund_supplier_resource zrr
+          left join zd_refund_supplier r on zrr.refund_supplier_id=r.id_
+          left join sys_org_setting os on os.org_code=r.org_code
+          left join subject_resource sr on sr.id_=zrr.resource_id
+          where r.semester_code=#{params.semesterCode} and sr.resource_type2='1'
+          group by os.cust_code
+          )d  on d.cust_code=os.cust_code
+          left join
+          (
+          select #{params.custCode}cust_code,ifnull(sum(a.stu_num),0)stu_total
+          from zd_semester_reg a
+          left join sys_org_setting sos on sos.cust_code =a.cust_code
+          left join sys_org o on o.org_code=sos.org_code
+          where a.semester_code=#{params.semesterCode}
+          and (find_in_set(#{params.orgCode},o.parent_codes )  or o.org_code=#{params.orgCode})
+
+          <if test="params.majorCode!=null and params.majorCode!=''">
+              and a.major_code=#{params.majorCode}
+          </if>
+          <if test="params.courseCode!=null and params.courseCode!=''">
+              and a.course_code=#{params.courseCode}
+          </if>
+          <if test="params.majorType!=null and params.majorType!=''">
+              and a.major_type=#{params.majorType}
+          </if>
+          <if test="params.studentType!=null and params.studentType!=''">
+              and a.student_type=#{params.studentType}
+          </if>
+          )e  on e.cust_code=os.cust_code
+          left join
+          (
+          select os.cust_code,ifnull(sum(zsir.real_num),0)stock_income_total
+          from zd_stock_income_resource zsir
+          left join zd_stock_income s on s.id_=zsir.income_id
+          left join sys_org_setting os on os.org_code=s.org_code
+          left join subject_resource r on r.id_=zsir.resource_id
+          where s.semester_code=#{params.semesterCode} and r.resource_type2='1'
+          <if test="params.custCode!=null and params.custCode!=''">
+              and os.cust_code=#{params.custCode}
+          </if>
+          group by os.cust_code
+
+          )f  on f.cust_code=os.cust_code
+          left join
+          (
+          select os.cust_code,ifnull(sum(pr.real_num),0)publish_total
+          from zd_publish p
+          left join zd_publish_resource pr on p.id_=pr.publish_id
+          left join sys_org_setting os on os.org_code=p.to_org_code
+          left join subject_resource r on r.id_=pr.resource_id
+          where p.semester_code=#{params.semesterCode} and r.resource_type2='1'
+          <if test="params.custCode!=null and params.custCode!=''">
+              and os.cust_code=#{params.custCode}
+          </if>
+          group by os.cust_code
+
+          )g  on g.cust_code=os.cust_code
+          where os.org_code=#{params.orgCode}
+      </if>
+        <if test="params.isClose !=null ">
+            select os.cust_code,
+            0 order_total,
+            ifnull(b.source_total,0)+ifnull(xian_source.source_total,0)source_total,
+            ifnull(c.refund_total,0)refund_total,ifnull(d.refund_supplier_total,0)refund_supplier_total,
+            ifnull(e.stu_total,0)stu_total,ifnull(f.stock_income_total,0)stock_income_total
+            ,ifnull(g.publish_total,0)publish_total,
+             0 orderCartTotal
+            ,0 sourceCartTotal
+            from sys_org_setting os
+
+            left join
+            (
+            select os.cust_code,ifnull(sum(order_num),0)order_total
+            from zd_order_resource  zor
+            left join zd_order o on zor.order_id=o.id_
+            left join sys_org_setting os on os.org_code=o.from_org_code
+            left join zd_major_course_resource zmcr on zmcr.id_=zor.zmcr_id
+            left join subject_resource r on r.id_=zor.resource_id
+            where o.semester_code=#{params.semesterCode}  and r.resource_type2='1'
+            and exists(
+            select * from zd_source_order_resource sor
+            left join zd_source s on s.id_=sor.source_id
+            where sor.order_resource_id=zor.id_
+            and s.is_sync='1'
+            )
+            <if test="params.custCode!=null and params.custCode!=''">
+                and os.cust_code=#{params.custCode}
+            </if>
+            <if test="params.majorCode!=null and params.majorCode!=''">
+                and zmcr.major_code=#{params.majorCode}
+            </if>
+            <if test="params.courseCode!=null and params.courseCode!=''">
+                and zmcr.course_code=#{params.courseCode}
+            </if>
+            <if test="params.majorType!=null and params.majorType!=''">
+                and zmcr.major_type=#{params.majorType}
+            </if>
+            <if test="params.studentType!=null and params.studentType!=''">
+                and zmcr.student_type=#{params.studentType}
+            </if>
+            group by os.cust_code
+            )a on a.cust_code=os.cust_code
+            left join (
+            select os.cust_code,ifnull(sum(source_num),0)source_total
+            from zd_source_resource sor
+            left join zd_source s on s.id_=sor.source_id
+            left join sys_org_setting os on os.org_code=s.to_org_code
+            left join subject_resource r on r.id_=sor.resource_id
+            where s.semester_code=#{params.semesterCode} and r.resource_type2='1'
+            and  s.is_sync='1'
+            <if test="params.custCode!=null and params.custCode!=''">
+                and os.cust_code=#{params.custCode}
+            </if>
+            <if test="params.majorCode!=null and params.majorCode!=''">
+                and exists (
+                select * from
+                zd_source_order_resource zsor
+                left join zd_order_resource zor on zor.id_=zsor.order_resource_id
+                left join zd_major_course_resource zmcr on zmcr.id_=zor.zmcr_id
+                where sor.id_=zsor.source_resource_id
+                <if test="params.majorCode!=null and params.majorCode!=''">
+                    and zmcr.major_code=#{params.majorCode}
+                </if>
+                <if test="params.courseCode!=null and params.courseCode!=''">
+                    and zmcr.course_code=#{params.courseCode}
+                </if>
+                <if test="params.majorType!=null and params.majorType!=''">
+                    and zmcr.major_type=#{params.majorType}
+                </if>
+                <if test="params.studentType!=null and params.studentType!=''">
+                    and zmcr.student_type=#{params.studentType}
+                </if>
+                )
+            </if>
+            group by os.cust_code
+            )xian_source on os.cust_code=xian_source.cust_code
+            left join (
+            select os.cust_code,ifnull(sum(source_num),0)source_total
+            from zd_source_resource sor
+            left join zd_source s on s.id_=sor.source_id
+            left join sys_org_setting os on os.org_code=s.org_code
+            left join subject_resource r on r.id_=sor.resource_id
+            where s.semester_code=#{params.semesterCode} and r.resource_type2='1'
+            and  s.is_sync='1'
+            <if test="params.custCode!=null and params.custCode!=''">
+                and os.cust_code=#{params.custCode}
+            </if>
+            group by os.cust_code
+            )b on os.cust_code=b.cust_code
+            left join
+            (
+
+            select os.cust_code,ifnull(sum(zrr.real_num),0)refund_total from zd_refund_resource zrr
+            left join zd_refund r on zrr.refund_id=r.id_
+            left join sys_org_setting os on os.org_code=r.org_code
+            left join subject_resource sr on sr.id_=zrr.resource_id
+            where r.semester_code=#{params.semesterCode} and sr.resource_type2='1'
+            and  r.is_sync='1'
+            <if test="params.custCode!=null and params.custCode!=''">
+                and os.cust_code=#{params.custCode}
+            </if>
+            group by os.cust_code
+            )c  on c.cust_code=os.cust_code
+            left join
+            (
+            select os.cust_code,ifnull(sum(zrr.real_num),0)refund_supplier_total
+            from zd_refund_supplier_resource zrr
+            left join zd_refund_supplier r on zrr.refund_supplier_id=r.id_
+            left join sys_org_setting os on os.org_code=r.org_code
+            left join subject_resource sr on sr.id_=zrr.resource_id
+            where r.semester_code=#{params.semesterCode} and sr.resource_type2='1'
+            and  r.is_sync='1'
+            group by os.cust_code
+            )d  on d.cust_code=os.cust_code
+            left join
+            (
+            select #{params.custCode}cust_code,ifnull(sum(a.stu_num),0)stu_total
+            from zd_semester_reg a
+            left join sys_org_setting sos on sos.cust_code =a.cust_code
+            left join sys_org o on o.org_code=sos.org_code
+            where a.semester_code=#{params.semesterCode}
+            and (find_in_set(#{params.orgCode},o.parent_codes )  or o.org_code=#{params.orgCode})
+
+            <if test="params.majorCode!=null and params.majorCode!=''">
+                and a.major_code=#{params.majorCode}
+            </if>
+            <if test="params.courseCode!=null and params.courseCode!=''">
+                and a.course_code=#{params.courseCode}
+            </if>
+            <if test="params.majorType!=null and params.majorType!=''">
+                and a.major_type=#{params.majorType}
+            </if>
+            <if test="params.studentType!=null and params.studentType!=''">
+                and a.student_type=#{params.studentType}
+            </if>
+            )e  on e.cust_code=os.cust_code
+            left join
+            (
+            select os.cust_code,ifnull(sum(zsir.real_num),0)stock_income_total
+            from zd_stock_income_resource zsir
+            left join zd_stock_income s on s.id_=zsir.income_id
+            left join sys_org_setting os on os.org_code=s.org_code
+            left join subject_resource r on r.id_=zsir.resource_id
+            where s.semester_code=#{params.semesterCode} and r.resource_type2='1'
+            <if test="params.custCode!=null and params.custCode!=''">
+                and os.cust_code=#{params.custCode}
+            </if>
+            group by os.cust_code
+
+            )f  on f.cust_code=os.cust_code
+            left join
+            (
+            select os.cust_code,ifnull(sum(pr.real_num),0)publish_total
+            from zd_publish p
+            left join zd_publish_resource pr on p.id_=pr.publish_id
+            left join sys_org_setting os on os.org_code=p.to_org_code
+            left join subject_resource r on r.id_=pr.resource_id
+            where p.semester_code=#{params.semesterCode} and r.resource_type2='1'
+            <if test="params.custCode!=null and params.custCode!=''">
+                and os.cust_code=#{params.custCode}
+            </if>
+            group by os.cust_code
+
+            )g  on g.cust_code=os.cust_code
+            where os.org_code=#{params.orgCode}
+        </if>
+
+    </select>
+   <select id="selectAll" resultType="io.renren.modules.zd.entity.ZdSemesterRegEntity">
+    select * from zd_semester_reg a
+    where 1=1
+    <if test="params.semesterCode!=null and params.semesterCode!=''">
+     and a.semester_code=#{params.semesterCode}
+    </if>
+   </select>
+    <select id="selectUnique" resultType="io.renren.modules.zd.entity.ZdSemesterRegEntity">
+         select * from zd_semester_reg a
+         where a.semester_code=#{semesterCode} and a.major_code=#{majorCode}
+         and a.major_type=#{majorType} and a.student_type=#{studentType}
+        and a.course_code=#{courseCode} and a.cust_code=#{custCode}
+        limit 1
+    </select>
+    <select id="selectRateSum" resultType="io.renren.modules.zd.vo.ZdSemesterRegVO">
+
+        select sum(order_total)order_total,sum(source_total)source_total,sum(refund_total)refund_total,sum(refund_supplier_total)refund_supplier_total
+        ,sum(stu_total)stu_total,sum(stock_income_total)stock_income_total
+        from
+        (
+        select os.cust_code,ifnull(a.order_total,0)order_total,ifnull(b.source_total,0)source_total,
+        ifnull(c.refund_total,0)refund_total,ifnull(d.refund_supplier_total,0)refund_supplier_total,
+        ifnull(e.stu_total,0)stu_total,ifnull(f.stock_income_total,0)stock_income_total
+        from sys_org_setting os
+        left join
+        (
+        select so.org_code,ifnull(sum(order_num),0)order_total from zd_order_resource  zor
+        left join zd_order o on zor.order_id=o.id_
+        left join sys_org_setting os on os.org_code=o.from_org_code
+        left join sys_org so on so.org_code=os.org_code
+        left join zd_major_course_resource zmcr on zmcr.id_=zor.zmcr_id
+        left join subject_resource r on r.id_=zor.resource_id
+        where o.semester_code=#{params.semesterCode}  and r.resource_type2='1'
+        and (find_in_set(#{params.orgCode},so.parent_codes ) or o.from_org_code=#{params.orgCode})
+
+        <if test="params.majorCode!=null and params.majorCode!=''">
+            and zmcr.major_code=#{params.majorCode}
+        </if>
+        <if test="params.courseCode!=null and params.courseCode!=''">
+            and zmcr.course_code=#{params.courseCode}
+        </if>
+        <if test="params.majorType!=null and params.majorType!=''">
+            and zmcr.major_type=#{params.majorType}
+        </if>
+        <if test="params.studentType!=null and params.studentType!=''">
+            and zmcr.student_type=#{params.studentType}
+        </if>
+        group by so.org_code
+        )a on a.org_code=os.org_code
+        left join (
+        select os.org_code,ifnull(sum(source_num),0)source_total from zd_source_resource sor
+        left join zd_source s on s.id_=sor.source_id
+        left join sys_org_setting os on os.org_code=s.org_code
+        left join sys_org o on o.org_code=os.org_code
+        left join subject_resource r on r.id_=sor.resource_id
+        where s.semester_code=#{params.semesterCode} and r.resource_type2='1'
+        and (find_in_set(#{params.orgCode},o.parent_codes ) or s.org_code=#{params.orgCode})
+        and exists (
+        select * from
+        zd_source_order_resource zsor
+        left join zd_order_resource zor on zor.id_=zsor.order_resource_id
+        left join zd_major_course_resource zmcr on zmcr.id_=zor.zmcr_id
+        where sor.id_=zsor.source_resource_id
+        <if test="params.majorCode!=null and params.majorCode!=''">
+            and zmcr.major_code=#{params.majorCode}
+        </if>
+        <if test="params.courseCode!=null and params.courseCode!=''">
+            and zmcr.course_code=#{params.courseCode}
+        </if>
+        <if test="params.majorType!=null and params.majorType!=''">
+            and zmcr.major_type=#{params.majorType}
+        </if>
+        <if test="params.studentType!=null and params.studentType!=''">
+            and zmcr.student_type=#{params.studentType}
+        </if>
+        )
+        group by os.org_code
+        )b on os.org_code=b.org_code
+        left join
+        (
+
+        select os.org_code,ifnull(sum(zrr.real_num),0)refund_total from zd_refund_resource zrr
+        left join zd_refund r on zrr.refund_id=r.id_
+        left join sys_org_setting os on os.org_code=r.org_code
+        left join sys_org o on os.org_code=os.org_code
+        left join subject_resource sr on sr.id_=zrr.resource_id
+        where r.semester_code=#{params.semesterCode} and sr.resource_type2='1'
+        and (find_in_set(#{params.orgCode},o.parent_codes )  or r.org_code=#{params.orgCode} )
+        group by os.org_code
+        )c  on c.org_code=os.org_code
+        left join
+        (
+        select os.org_code,ifnull(sum(zrr.real_num),0)refund_supplier_total
+        from zd_refund_supplier_resource zrr
+        left join zd_refund_supplier r on zrr.refund_supplier_id=r.id_
+        left join sys_org_setting os on os.org_code=r.org_code
+        left join subject_resource sr on sr.id_=zrr.resource_id
+        where r.semester_code=#{params.semesterCode} and sr.resource_type2='1'
+        <if test="params.parentOrgCode!=null and params.parentOrgCode!=''">
+            and (find_in_set(r.org_code,#{params.parentOrgCode}) or r.org_code=#{params.orgCode})
+        </if>
+        group by os.org_code
+        )d  on d.org_code=os.org_code
+        left join
+        (
+        select #{params.orgCode} org_code,ifnull(sum(a.stu_num),0)stu_total
+        from zd_semester_reg a
+        left join sys_org_setting sos on sos.cust_code =a.cust_code
+        left join sys_org o on o.org_code=sos.org_code
+        where a.semester_code=#{params.semesterCode}
+        and (find_in_set(#{params.orgCode},o.parent_codes )  or o.org_code=#{params.orgCode})
+        <if test="params.majorCode!=null and params.majorCode!=''">
+            and a.major_code=#{params.majorCode}
+        </if>
+        <if test="params.courseCode!=null and params.courseCode!=''">
+            and a.course_code=#{params.courseCode}
+        </if>
+        <if test="params.majorType!=null and params.majorType!=''">
+            and a.major_type=#{params.majorType}
+        </if>
+        <if test="params.studentType!=null and params.studentType!=''">
+            and a.student_type=#{params.studentType}
+        </if>
+
+        )e  on e.org_code=os.org_code
+        left join
+        (
+        select os.org_code,ifnull(sum(zsir.real_num),0)stock_income_total
+        from zd_stock_income_resource zsir
+        left join zd_stock_income s on s.id_=zsir.income_id
+        left join sys_org_setting os on os.org_code=s.org_code
+        left join subject_resource r on r.id_=zsir.resource_id
+        left join sys_org o on o.org_code=os.org_code
+        where s.semester_code=#{params.semesterCode} and r.resource_type2='1'
+        and (find_in_set(#{params.orgCode},o.parent_codes ) or s.org_code=#{params.orgCode})
+        group by os.org_code
+
+        )f  on f.org_code=os.org_code
+        left join sys_org o on o.org_code=os.org_code
+        where
+        find_in_set(#{params.orgCode}, o.parent_codes )
+        ) t
+
+    </select>
+
+
+</mapper>

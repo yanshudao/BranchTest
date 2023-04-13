@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.zd.dao.ZdOrgMajorDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.zd.entity.ZdOrgMajorEntity" id="zdOrgMajorMap">
+        <result property="id" column="id_"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="majorId" column="major_id"/>
+        <result property="semesterCode" column="semester_code"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="enable" column="enable_"/>
+        <result property="remark" column="remark_"/>
+    </resultMap>
+    <!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.zd.vo.OrgMajorVO" id="orgMajorVOMap">
+        <result property="id" column="id_"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="majorId" column="major_id"/>
+        <result property="majorName" column="major_name"/>
+        <result property="semesterCode" column="semester_code"/>
+        <result property="majorType" column="major_type"/>
+        <result property="studentType" column="student_type"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="enable" column="enable_"/>
+        <result property="remark" column="remark_"/>
+        <result property="orgMajorId" column="org_major_id"/>
+    </resultMap>
+
+    <select id="selectByList" resultMap="orgMajorVOMap">
+    SELECT om.id_ ,m.id_ major_Id,m.major_name ,m.major_code ,
+    om.semester_code,m.student_type,m.major_type
+    FROM zd_org_major om
+    LEFT JOIN subject_major_base m ON m.id_=om.major_id
+    where 1=1
+    <if test="params.orgCode!=null and params.orgCode!=''">
+        and om.org_code=#{params.orgCode}
+    </if>
+    <if test="params.semesterCode!=null and params.semesterCode!=''">
+        and om.semester_Code=#{params.semesterCode}
+    </if>
+        <if test="params.majorName!=null and params.majorName!=''">
+            and
+            (
+            m.major_name like concat('%',#{params.majorName},'%')
+            or
+            m.major_code like concat('%',#{params.majorName},'%')
+            )
+        </if>
+    </select>
+
+    <select id="selectByOrg" resultMap="orgMajorVOMap">
+    SELECT a.major_id,a.semester_code,m.`major_code`,m.`major_name`,m.student_type,m.major_type FROM
+    (
+    SELECT major_id,semester_code FROM zd_org_major
+        WHERE org_code=#{params.parentOrgCode}
+        AND semester_code=#{params.semesterCode}
+    GROUP BY major_id,semester_code
+    )a
+
+    LEFT JOIN subject_major_base m ON a.major_id=m.id_
+     WHERE a.major_id NOT IN (
+    SELECT major_id FROM zd_org_major WHERE org_code=#{params.orgCode}
+    AND semester_code=#{params.semesterCode}
+    GROUP BY major_id)
+        <if test="params.majorName!=null and params.majorName!=''">
+            and
+            (
+            m.major_name like concat('%',#{params.majorName},'%')
+            or
+            m.major_code like concat('%',#{params.majorName},'%')
+            )
+        </if>
+    </select>
+
+      <select id="selectBySheng" resultMap="orgMajorVOMap">
+
+   SELECT m.id_ major_id,m.`major_code`,m.`major_name`,m.student_type,m.major_type
+    FROM subject_major_base m WHERE (org_code=#{params.parentOrgCode} OR org_code=#{params.orgCode})
+AND id_ NOT IN (SELECT major_id FROM zd_org_major om WHERE om.org_code=#{params.orgCode})
+          <if test="params.majorName!=null and params.majorName!=''">
+              and
+              (
+              m.major_name like concat('%',#{params.majorName},'%')
+              or
+              m.major_code like concat('%',#{params.majorName},'%')
+              )
+          </if>
+    </select>
+    <resultMap id="orgZdVOMap" type="io.renren.modules.zd.vo.OrgZdVO">
+        <result property="majorType" column="major_type"/>
+        <result property="studentType" column="student_type"/>
+    </resultMap>
+    <select id="selectPageGroup" resultMap="orgZdVOMap">
+
+            SELECT
+            sm.major_type,sm.student_type
+         FROM zd_org_major om
+         LEFT JOIN subject_major_base sm ON om.major_id=sm.id_
+        WHERE
+        (om.org_code=#{params.orgCode} or find_in_set(om.org_code,#{params.parentOrgCodes}))
+        and om.semester_code=#{params.semesterCode}
+        and sm.major_type is not null
+        GROUP BY sm.major_type,sm.student_type
+
+    </select>
+    <resultMap type="io.renren.modules.zd.vo.OrgZdMajorVO" id="orgZdMajorVOMap">
+        <result property="id" column="id_"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="majorId" column="major_id"/>
+        <result property="majorName" column="major_name"/>
+        <result property="studentType" column="student_type"/>
+        <result property="majorType" column="major_type"/>
+        <result property="semesterCode" column="semester_code"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="enable" column="enable_"/>
+        <result property="remark" column="remark_"/>
+    </resultMap>
+    <select id="selectMajorByMap" resultMap="orgZdMajorVOMap">
+  SELECT  om.*,zm.major_name FROM zd_org_major om
+          LEFT JOIN subject_major_base zm ON zm.id_=om.major_id
+           WHERE
+            (om.org_code=#{params.orgCode} or find_in_set(om.org_code,#{params.parentOrgCodes}))
+           AND zm.major_type=#{params.majorType}
+           AND zm.student_type=#{params.studentType}
+           and om.semester_code=#{params.semesterCode}
+    group by om.major_id
+    order by zm.major_name
+    </select>
+    <select id="selectIdsByMap" resultType="java.lang.String">
+
+        select id_  FROM zd_org_major
+        where org_code=#{orgCode} and major_id=#{majorId} and semester_code=#{semesterCode}
+
+    </select>
+
+    <delete id="deleteChildrenBatchIds">
+
+        DELETE om.* FROM zd_org_major om
+        LEFT JOIN sys_org o ON om.org_code=o.org_code
+        WHERE o.parent_codes LIKE  concat('%',#{parentOrgCode},'%') and om.semester_code=#{semesterCode}
+        and om.major_id in
+
+        <foreach collection="zdOrgList" open="(" close=")" separator="," item="item">
+        #{item.majorId}
+       </foreach>
+
+
+
+    </delete>
+    <delete id="deleteByMajorIds">
+        delete from zd_org_major where major_id IN
+        <foreach collection="ids" open="(" close=")" separator="," item="item">
+            #{item}
+        </foreach>
+    </delete>
+</mapper>

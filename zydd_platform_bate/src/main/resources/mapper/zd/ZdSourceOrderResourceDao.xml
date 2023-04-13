@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.zd.dao.ZdSourceOrderResourceDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.zd.entity.ZdSourceOrderResourceEntity" id="sourceOrderResourceMap">
+        <result property="id" column="id_"/>
+        <result property="sourceId" column="source_id"/>
+        <result property="orderResourceId" column="order_resource_id"/>
+        <result property="createTime" column="create_time"/>
+        <result property="createBy" column="create_by"/>
+    </resultMap>
+    <delete id="deleteBySourceIds">
+
+        delete from zd_source_order_resource where source_id in
+        <foreach collection="ids" separator="," close=")" open="(" item="item">#{item}</foreach>
+    </delete>
+
+
+</mapper>

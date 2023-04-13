@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.zd.dao.ZdRefundResourceDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.zd.entity.ZdRefundResourceEntity" id="zdRefundResourceMap">
+        <result property="id" column="id_"/>
+        <result property="refundId" column="refund_id"/>
+        <result property="resourceId" column="resource_id"/>
+        <result property="refundNum" column="refund_num"/>
+        <result property="realNum" column="real_num"/>
+        <result property="refundPrice" column="refund_price"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="status" column="status"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="enable" column="enable_"/>
+        <result property="remark" column="remark_"/>
+        <result property="nitemdiscountrate" column="nitemdiscountrate"/>
+        <result property="mayang" column="mayang"/>
+        <result property="shiyang" column="shiyang"/>
+    </resultMap>
+    <!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.zd.vo.RefundResourceVo" extends="zdRefundResourceMap" id="RefundResourceVo">
+        <result property="resourceName" column="resource_name"/>
+        <result property="resourceCode" column="resource_code"/>
+        <result property="resourceVersion" column="resource_version"/>
+        <result property="resourceType" column="resource_type"/>
+        <result property="isbn" column="isbn"/>
+        <result property="supplierId" column="supplier_id"/>
+        <!--<result property="catalogId" column="catalog_id"/>-->
+        <!--<result property="catalogName" column="catalog_name"/>-->
+
+    </resultMap>
+
+
+    <!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.zd.vo.RefundResourceInfoVo" extends="zdRefundResourceMap" id="zdRefundResourceInfoVO">
+        <result property="resourceCode" column="resource_code"/>
+        <result property="resourceName" column="resource_name"/>
+        <result property="resourceVersion" column="resource_version"/>
+        <result property="resourceType" column="resource_type"/>
+        <!--<result property="catalogId" column="catalog_code"/>-->
+        <!--<result property="catalogName" column="catalog_name"/>-->
+        <result property="userName" column="realname"/>
+        <result property="publishPrice" column="price"/>
+        <result property="publishName" column="publishing_name"/>
+        <result property="semesterName" column="name"/>
+        <result property="orderNum" column="sum(orderNum)"/>
+        <result property="totalNum" column="totalNum"/>
+        <result property="semesterCode" column="semester_code"/>
+    </resultMap>
+    <!--孔 begin-->
+    <!--审核修改退货的实际数量-->
+    <update id="updateRefundRealNum">
+        UPDATE zd_refund_resource
+        SET real_num = #{params.realnum} where resource_id =#{params.resourceid}
+    </update>
+
+    <!--根據退货单号获取退货的详细信息界面审核界面的子功能-->
+    <select id="queryRefundResourceInfoPage" resultMap="RefundResourceVo">
+    SELECT sr.resource_version, sr.resource_name, sr.resource_code, sr.resource_type, sr.isbn, res.*
+FROM zd_refund_resource res LEFT JOIN subject_resource sr ON sr.id_=res.`resource_id`
+WHERE res.refund_id = #{params.refundid}
+    </select>
+    <!--获取报订退货资源列表 界面-->
+    <select id="getRefundResourceinfoForList" resultMap="zdRefundResourceInfoVO">
+        SELECT
+        ss.name,
+        so.org_name,
+        sr.publishing_name,
+        ur.realname,
+        zr.org_code,
+        sr.resource_code,
+        sr.resource_version,
+        sr.resource_name,
+        sr.resource_type,
+        res.refund_id,
+        res.resource_id,
+        res.refund_num,
+        res.create_by,
+        res.create_time,
+        sr.price,
+        zr.semester_code
+        FROM
+        zd_refund_resource res,
+        subject_resource sr,
+
+        zd_refund zr,
+        sys_org so,
+        sys_user ur,
+        sys_semester ss
+        WHERE
+        res.resource_id = sr.resource_code
+        AND res.resource_id = sr.resource_code
+        AND zr.id_ = res.refund_id
+        AND zr.org_code = so.org_code
+        AND ss.semester_code = zR.semester_code
+        AND zr.create_by = ur.user_id
+        <if test="params.org_code!=null and params.org_code!=''">
+            and zr.org_code in ( ${params.org_code} )
+        </if>
+        <if test="params.semester_code!=null and params.semester_code!=''">
+            and zr.semester_code in  ${params.semester_code}
+        </if>
+        <if test="params.start_time!=null and params.start_time!=''">
+            AND DATE_FORMAT(zr.create_time,'%Y-%m-%d') &gt;= #{params.start_time}
+        </if>
+        <if test="params.end_time!=null and params.end_time!=''">
+            AND DATE_FORMAT(zr.create_time,'%Y-%m-%d') &lt;= #{params.end_time}
+        </if>
+        <if test="params.resource_code!=null and params.resource_code!=''">
+            and sr.resource_code = #{params.resource_code}
+        </if>
+        ORDER BY  res.create_time DESC
+    </select>
+    <!--孔 end-->
+    <select id="listRefundResourcesByRefundId" resultMap="zdRefundResourceMap">
+        SELECT
+            *
+        FROM
+            zd_refund_resource
+        WHERE
+            refund_id = #{_parameter};
+    </select>
+    <select id="selectByRefundId" resultMap="zdRefundResourceMap">
+            SELECT
+            *
+        FROM
+            zd_refund_resource
+        WHERE
+            refund_id = #{refundId};
+    </select>
+    <resultMap type="io.renren.modules.zd.vo.ZdRefundResourceGroup" id="zdRefundResourceGroupMap">
+        <result property="supplierId" column="supplier_id"/>
+        <collection property="list"  resultMap="io.renren.modules.zd.dao.ZdRefundResourceDao.zdRefundResourceMap">
+        </collection>
+    </resultMap>
+    <select id="selectGroupByRefundId" resultMap="zdRefundResourceGroupMap">
+        select rr.*,r.supplier_id from subject_resource r
+        left join zd_refund_resource rr on r.id_=rr.resource_id
+        where rr.refund_id=#{refundId}
+        order by r.supplier_id
+    </select>
+    <select id="listResourceByRefundId" resultType="io.renren.modules.zd.vo.ZdCountyRefundResourceVO">
+          SELECT
+        sr.resource_version,
+        sr.resource_name,
+        sr.resource_code,
+        sr.resource_type,
+        sr.isbn,
+        res.*
+    FROM
+        zd_refund_resource res,
+        subject_resource sr
+    WHERE
+        res.resource_id = sr.id_
+    AND	res.refund_id = #{refundId}
+    </select>
+    <delete id="deleteByRefundId">
+        delete from zd_refund_resource where refund_id=#{refundId}
+    </delete>
+
+</mapper>

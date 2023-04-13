@@ -1,0 +1,47 @@
+swagger:
+  enable: false
+spring:
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driverClassName: com.mysql.jdbc.Driver
+    druid:
+      first:
+        url: jdbc:mysql://127.0.0.1:3306/zydd_platform_bate2?allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8
+#        url: jdbc:mysql://47.93.119.50:3306/zydd_platform_bate2?allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8
+        username: root
+        password: hyrt@2017
+      second:
+        url: jdbc:mysql://127.0.0.1:3306/zydd_platform_bate2?allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8
+#        url: jdbc:mysql://47.93.119.50:3306/zydd_platform_bate2?allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8
+        username: root
+        password: hyrt@2017
+      initial-size: 10
+      max-active: 100
+      min-idle: 10
+      max-wait: 60000
+      pool-prepared-statements: true
+      max-pool-prepared-statement-per-connection-size: 20
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      validation-query: SELECT 1 FROM DUAL
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      stat-view-servlet:
+        enabled: true
+        url-pattern: /druid/*
+        #login-username: admin
+        #login-password: admin
+      filter:
+        stat:
+          log-slow-sql: true
+          slow-sql-millis: 1000
+          merge-sql: true
+        wall:
+          config:
+            multi-statement-allow: true
+webservice:
+  service:
+    #正式
+#    url: http://211.99.243.5/OUCP-WSAPI/webService/oucp-wsapi?wsdl
+    url: http://103.46.169.132/OUCP-WSAPI/webService/oucp-wsapi?wsdl

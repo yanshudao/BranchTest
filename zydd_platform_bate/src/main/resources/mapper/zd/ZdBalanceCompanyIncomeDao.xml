@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.zd.dao.ZdBalanceCompanyIncomeDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.zd.entity.ZdBalanceCompanyIncomeEntity" id="zdBalanceCompanyIncomeMap">
+        <result property="id" column="id_"/>
+        <result property="incomeId" column="income_id"/>
+        <result property="balanceCompanyId" column="balance_company_id"/>
+    </resultMap>
+    <resultMap id="zdBalanceCompanyIncomeVOMap" type="io.renren.modules.zd.vo.ZdBalanceCompanyIncomeVO">
+        <result column="shiyang" property="shiyang"/>
+        <result column="mayang" property="mayang"/>
+        <result column="total_real_num" property="totalRealNum"/>
+        <result column="kind_num" property="kindNum"/>
+        <result column="create_time" property="createTime"/>
+        <result column="income_sn" property="incomeSn"/>
+    </resultMap>
+    <select id="listIncomeListByBalanceId" resultMap="zdBalanceCompanyIncomeVOMap">
+        SELECT sum(ir.income_num*ir.income_price*ifnull(nitemdiscountrate,1))shiyang,
+        sum(ir.income_num) total_real_num,
+        count(distinct  ir.resource_id) kind_num,
+        sum(ir.income_num*ir.income_price)mayang
+        ,sum(ir.income_num)total_real_num,i.create_time,i.income_sn,i.income_name,i.semester_code,
+        i.erpcode,i.carrierno,i.send_date
+
+         FROM zd_balance_company_income
+        ci LEFT JOIN zd_stock_income i ON ci.income_id=i.id_
+        LEFT JOIN zd_stock_income_resource ir ON i.id_=ir.income_id
+        WHERE ci.balance_company_id=#{balanceId}
+        GROUP BY i.id_
+    </select>
+
+
+</mapper>

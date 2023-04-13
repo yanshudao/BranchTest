@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.subject.dao.SubjectResourceTypeDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.subject.entity.SubjectResourceTypeEntity" id="subjectResourceTypeMap">
+        <result property="id" column="id_"/>
+        <result property="name" column="name"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+    <select id="selectByName" resultType="io.renren.modules.subject.entity.SubjectResourceTypeEntity">
+        select * from subject_resource_type where name=#{name}  order by create_time limit 1
+
+    </select>
+
+
+</mapper>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.sys.dao.SysOrgAreaDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.sys.entity.SysOrgAreaEntity" id="sysOrgAreaMap">
+        <result property="id" column="id_"/>
+        <result property="areaCode" column="area_code"/>
+        <result property="areaName" column="area_name"/>
+        <result property="createTime" column="create_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="orgCode" column="org_code"/>
+    </resultMap>
+    <select id="selectListPage" resultMap="sysOrgAreaMap">
+
+        select a.* from sys_org_area a
+        where 1=1
+        <if test="params.orgCode!=null and params.orgCode!=''">
+          and a.org_code=#{params.orgCode}
+        </if>
+
+    </select>
+    <select id="selectByCode" resultMap="sysOrgAreaMap">
+        select a.* from sys_org_area a
+        where 1=1
+        and a.area_code=#{areaCode}
+    </select>
+
+
+</mapper>

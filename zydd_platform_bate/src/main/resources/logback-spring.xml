@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/base.xml" />
+    <logger name="org.springframework.web" level="INFO"/>
+    <logger name="org.springboot.sample" level="TRACE" />
+    <appender name="serviceAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+   <file>/shujupan/logs/orderbill_service.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>/shujupan/logs/orderbill_service-%d{yyyy-MM-dd}.log</fileNamePattern>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{5} - %msg%n</pattern>
+        </encoder>
+    </appender>
+    <appender name="orderCartAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>/shujupan/logs/ordercart_service.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>/shujupan/logs/ordercart_service-%d{yyyy-MM-dd}.log</fileNamePattern>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{5} - %msg%n</pattern>
+        </encoder>
+    </appender>
+    <appender name="rollingAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>/shujupan/logs/zydd_platform_bate.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>/shujupan/logs/zydd_platform_bate-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder><!-- 必须指定，否则不会往文件输出内容 -->
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{5} - %msg%n</pattern>
+        </encoder>
+        <append>false</append>
+        <prudent>false</prudent>
+    </appender>
+    <!-- 开发、测试环境 -->
+    <springProfile name="dev,test">
+        <logger name="org.springframework.web" level="INFO"/>
+        <logger name="org.springboot.sample" level="INFO" />
+        <logger name="org.apache.cxf" level="INFO" />
+        <logger name="io.renren" level="DEBUG" />
+
+    </springProfile>
+
+    <!-- 生产环境 -->
+    <springProfile name="prod">
+<!--        <logger name="org.springframework.web" level="DEBUG"/>-->
+<!--        <logger name="org.springboot.sample" level="DEBUG" />-->
+<!--        <logger name="io.renren" level="DEBUG" />-->
+        <logger name="io.renren.modules.subject.service.impl" level="DEBUG" >
+            <appender-ref ref="serviceAppender" />
+        </logger>
+        <!--<logger name="io.renren.modules.zd.service.impl.ZdCartServiceImpl" level="DEBUG" >
+            <appender-ref ref="orderCartAppender" />
+        </logger>
+        <logger name="io.renren.modules.zd.service.impl.ZdOrderCartServiceImpl" level="DEBUG" >
+            <appender-ref ref="orderCartAppender" />
+        </logger>
+        <logger name="io.renren.modules.zd.controller.ZdOrderCartController" level="DEBUG" >
+            <appender-ref ref="orderCartAppender" />
+        </logger>-->
+    </springProfile>
+    <root level="ERROR">
+        <appender-ref ref="rollingAppender" />
+    </root>
+</configuration>

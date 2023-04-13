@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.zd.dao.ZdStockIncomeResourceDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.zd.entity.ZdStockIncomeResourceEntity" id="zdStockIncomeResourceMap">
+        <result property="id" column="id_"/>
+        <result property="incomeId" column="income_id"/>
+        <result property="resourceId" column="resource_id"/>
+        <result property="incomePrice" column="income_price"/>
+        <result property="incomeNum" column="income_num"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="status" column="status"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="enable" column="enable_"/>
+        <result property="remark" column="remark_"/>
+        <result property="mayang" column="mayang"/>
+        <result property="shiyang" column="shiyang"/>
+        <result property="nitemdiscountrate" column="nitemdiscountrate"/>
+    </resultMap>
+    <resultMap type="io.renren.modules.zd.vo.ZdStockIncomeResourceVO" extends="zdStockIncomeResourceMap" id="zdStockIncomeResourceVOMap">
+        <result property="resourceCode" column="resource_code"/>
+        <result property="resourceName" column="resource_name"/>
+        <result property="resourceType" column="resource_type"/>
+        <result property="price" column="price"/>
+        <result property="resourceVersion" column="resource_version"/>
+    </resultMap>
+    <select id="selectByIncomeId" resultMap="zdStockIncomeResourceMap">
+        select a.* from zd_stock_income_resource a where a.income_id=#{incomeId}
+
+    </select>
+    <select id="selectVOByIncomeId" resultMap="zdStockIncomeResourceVOMap">
+           select a.*,r.resource_code,r.resource_name,r.resource_version,r.resource_type,r.price from
+           zd_stock_income_resource a
+            left join subject_resource r on a.resource_id=r.id_
+            where a.income_id=#{incomeId}
+    </select>
+    <select id="countByMap" resultType="java.lang.Integer">
+        select count(0) from zd_stock_income_resource
+        where status=#{params.status}
+        <if test="params.ids!=null and params.ids.size()>0">
+            and id_ in
+            <foreach collection="params.ids" open="(" close=")" separator="," item="item">
+                #{item}
+            </foreach>
+        </if>
+        <if test="params.incomeId!=null and params.incomeId!=''">
+            and income_id=#{params.incomeId}
+        </if>
+    </select>
+    <select id="selectByForeignId" resultMap="zdStockIncomeResourceMap">
+    select * from zd_stock_income_resource where foreign_id=#{foreignId}
+
+    </select>
+    <select id="selectStatisticsDetailByMap" resultType="io.renren.modules.search.vo.StatisticsStockIncomeResourceDetailVO">
+
+    SELECT r.resource_code,r.resource_name,r.resource_version,r.isbn,r.resource_Type,r.price,
+        zr.`mayang`,zr.income_price,
+        zr.income_num,
+        r.price,r.publishing_Name,zr.id_ id,s.income_sn,
+        (SELECT s1.name FROM sys_semester s1 WHERE s1.semester_code=s.semester_code)semester_name,
+        (SELECT c.company_name FROM sys_company c WHERE c.id_=r.supplier_id )supplier_Name,
+        o.org_name province_name,o.org_code,zr.status,oc.org_name,s.carrierno,s.num,s.send_date
+        FROM zd_stock_income_resource zr
+        LEFT JOIN zd_stock_income s ON zr.income_id=s.id_
+        LEFT JOIN subject_resource r ON r.id_=zr.resource_id
+        LEFT JOIN sys_org o ON o.org_code=s.org_code
+        LEFT JOIN sys_org oc ON oc.`org_code`=s.`to_org_code`
+        WHERE 1=1
+        <if test="params.supplierId!=null and params.supplierId!=''">
+            AND s.supplier_id=#{params.supplierId}
+        </if>
+        <if test="params.ids!=null and params.ids.size()>0">
+            AND s.id_ in
+            <foreach collection="params.ids" item="item" close=")" open="(" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        <if test="params.orgCode!=null and params.orgCode!=''">
+            AND s.org_code=#{params.orgCode}
+        </if>
+        <if test="params.toOrgCode!=null and params.toOrgCode!=''">
+            AND s.to_org_code=#{params.toOrgCode}
+        </if>
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            AND s.semester_code=#{params.semesterCode}
+        </if>
+        <if test="params.sourceId!=null and params.sourceId!=''">
+            AND s.id_=#{params.sourceId}
+        </if>
+        <if test="params.resourceName!=null and params.resourceName!=''">
+            and ( r.resource_code like concat('%',#{params.resourceName},'%') or
+            r.resource_name like  concat('%',#{params.resourceName},'%')
+            )
+        </if>
+        GROUP BY zr.id_
+    </select>
+
+
+</mapper>

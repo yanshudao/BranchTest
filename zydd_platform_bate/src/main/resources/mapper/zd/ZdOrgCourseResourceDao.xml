@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.zd.dao.ZdOrgCourseResourceDao">
+
+    <resultMap type="io.renren.modules.zd.entity.ZdOrgCourseResourceEntity" id="zdOrgCourseResourceMap">
+        <result property="id" column="id_"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="majorId" column="major_id"/>
+        <result property="courseId" column="course_id"/>
+        <result property="resourceId" column="resource_id"/>
+        <result property="semesterCode" column="semester_code"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="status" column="status"/>
+        <result property="enable" column="enable_"/>
+        <result property="remark" column="remark_"/>
+    </resultMap>
+    <resultMap type="io.renren.modules.zd.vo.CourseResourceOrgVO" id="courseResourceOrgVOMap">
+        <result property="id" column="id_"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="majorId" column="major_id"/>
+        <result property="courseId" column="course_id"/>
+        <result property="resourceId" column="resource_id"/>
+        <result property="semesterCode" column="semester_code"/>
+        <result property="majorName" column="major_name"/>
+        <result property="courseName" column="course_name"/>
+        <result property="resourceName" column="resource_name"/>
+        <result property="supplierName" column="supplier_Name"/>
+        <result property="publishingName" column="publishing_name"/>
+        <result property="majorCode" column="major_code"/>
+        <result property="courseCode" column="course_code"/>
+        <result property="resourceCode" column="resource_code"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="status" column="status"/>
+        <result property="enable" column="enable_"/>
+        <result property="remark" column="remark_"/>
+    </resultMap>
+
+
+    <select id="selectByList" resultMap="courseResourceOrgVOMap">
+        SELECT omcr.org_code,omcr.id_,m.id_ major_id,m.major_name ,m.major_code ,r.id_ resource_id,r.`resource_code`,r.`resource_name`,c.`course_code`,c.`course_name`,c.id_ course_id
+        FROM zd_org_course_resource omcr
+        LEFT JOIN subject_major_base m ON m.id_=omcr.major_id
+        LEFT JOIN subject_course c ON c.id_=omcr.course_id
+        LEFT JOIN subject_resource r ON r.id_=omcr.`resource_id`
+        where 1=1
+        <if test="params.orgCode!=null and params.orgCode!=''">
+            and omcr.org_code=#{params.orgCode}
+        </if>
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            and omcr.semester_code=#{params.semesterCode}
+        </if>
+        <if test="params.majorId!=null and params.majorId!=''">
+            and omcr.major_id=#{params.majorId}
+        </if>
+        <if test="params.courseId!=null and params.courseId!=''">
+            and omcr.course_id=#{params.courseId}
+        </if>
+        <if test="params.resourceId!=null and params.resourceId!=''">
+            and omcr.resource_id=#{params.resourceId}
+        </if>
+    </select>
+
+    <select id="selectResourceByZdOrg" resultMap="courseResourceOrgVOMap">
+
+        SELECT r.*,c.course_code,c.course_name,c.id_ course_id,sc.company_name supplier_Name  FROM
+        subject_course c
+        LEFT JOIN subject_course_resource cr ON c.id_=cr.course_id
+         LEFT JOIN subject_resource r ON cr.resource_id=r.id_
+        left join sys_company sc on sc.id_=r.supplier_id
+
+        WHERE
+         1=1 and  r.delete_flag='0' and  course_id=#{params.courseId}
+        and r.org_code in(#{params.orgCode},#{params.parentOrgCode})
+         AND r.id_ NOT IN (SELECT resource_id
+        FROM zd_org_course_resource WHERE  org_code in(#{params.orgCode},#{params.parentOrgCode})
+
+        )
+   <!--     <if test="params.majorId!=null and params.majorId!=''">
+         and    omc.major_id=#{params.majorId}
+        </if>-->
+
+        <if test="params.courseId!=null and params.courseId!=''">
+            and  cr.course_id=#{params.courseId}
+        </if>
+        <if test="params.resourceType!=null and params.resourceType!=''">
+            and  r.resource_type=#{params.resourceType}
+        </if>
+
+       </select>
+
+
+        <select id="selectResourceByZd" resultMap="courseResourceOrgVOMap">
+  SELECT r.*,c.course_code,c.course_name,c.id_ course_id  FROM
+        subject_course c
+        LEFT JOIN subject_course_resource cr ON c.id_=cr.course_id
+       LEFT JOIN subject_resource r ON cr.resource_id=r.id_
+        WHERE 1=1
+        and c.id_=#{params.courseId}
+        <if test="params.resourceType!=null and params.resourceType!=''">
+            and r.resource_type=#{params.resourceType}
+        </if>
+        and find_in_set(cr.org_code,#{params.parentCodes})
+         AND r.delete_flag='0'
+          and  r.id_ NOT IN (SELECT resource_id
+         FROM zd_org_course_resource WHERE 1=1
+         and semester_code=#{params.semesterCode}
+          and  (find_in_set(org_code,#{params.parentCodes}) or org_code=#{params.orgCode})
+          and  course_id=#{params.courseId}
+          )
+        </select>
+    <select id="selectNotHaveByOrg" resultMap="courseResourceOrgVOMap">
+  SELECT r.*,sc.company_name supplier_name
+        FROM subject_resource r
+        left join sys_company sc on sc.id_=r.supplier_Id
+  WHERE 1=1
+        <if test="params.resourceName!=null and params.resourceName!=''">
+            and
+            (r.resource_name like concat('%',#{params.resourceName},'%')
+            or
+            r.resource_name like concat('%',#{params.resourceName},'%')
+            )
+        </if>
+        and find_in_set(r.org_code,#{params.parentOrgCode})
+        and    r.id_ not in (
+        select ocr.resource_id from zd_org_course_resource ocr
+        where
+        ocr.course_id=#{params.courseId}
+        <if test="params.orgCode!=null and params.orgCode!=''">
+            AND ocr.org_code=#{params.orgCode}
+        </if>
+        )
+
+    </select>
+    <select id="selectHaveByOrg" resultMap="courseResourceOrgVOMap">
+ SELECT cr.id_,c.`course_code`,c.`course_name`,r.*,sc.company_name supplier_name,r.id_ resource_id
+        FROM subject_resource r
+        LEFT JOIN subject_course_resource cr ON r.id_=cr.`resource_id`
+ LEFT JOIN subject_course c ON c.id_=cr.`course_id`
+        left join sys_company sc on sc.id_=r.supplier_Id
+        WHERE 1=1
+         AND cr.course_id=#{params.courseId}
+        and  cr.resource_id not in (
+        select resource_id from zd_org_course_resource
+        where 1=1
+        AND course_id=#{params.courseId}
+        AND (find_in_set(org_code,#{params.parentOrgCode}) or org_code=#{params.orgCode})
+        )
+
+        <if test="params.parentOrgCode!=null and params.parentOrgCode!=''">
+            AND (find_in_set(cr.org_code,#{params.parentOrgCode}) or cr.org_code=#{params.orgCode})
+        </if>
+        <if test="params.resourceName!=null and params.resourceName!=''">
+            and
+            (r.resource_name like concat('%',#{params.resourceName},'%')
+            or
+            r.resource_name like concat('%',#{params.resourceName},'%')
+            )
+        </if>
+
+    </select>
+
+
+    <select id="selectDisableResourceByOrg" resultMap="courseResourceOrgVOMap">
+
+
+  SELECT ocr.id_,c.`course_code`,c.`course_name`,r.resource_name,r.resource_code,r.resource_type,r.price,sc.company_name supplier_Name FROM
+  zd_org_course_resource ocr
+  LEFT JOIN subject_course c ON ocr.course_id=c.`id_`
+  LEFT JOIN subject_resource r ON r.id_=ocr.resource_id
+      left join sys_company sc on sc.id_=r.supplier_id
+  WHERE 1=1 AND ocr.org_code=#{params.orgCode} AND r.id_ IS NOT NULL
+
+      <if test="params.semesterCode!=null and params.semesterCode!=''">
+          and ocr.semester_code=#{params.semesterCode}
+      </if>
+        <if test="params.courseId!=null and params.courseId!=''">
+            and ocr.course_Id=#{params.courseId}
+        </if>
+    </select>
+    <delete id="deleteByCourseIds">
+        delete from zd_org_course_resource where course_id IN
+        <foreach collection="ids" item="item" separator="," close=")" open="(">
+            #{item}
+        </foreach>
+    </delete>
+    <delete id="deleteByResourceIds">
+        delete from zd_org_course_resource where resource_id IN
+        <foreach collection="ids" item="item" separator="," close=")" open="(">
+            #{item}
+        </foreach>
+    </delete>
+    <delete id="deleteByMajorIds">
+        delete from zd_org_course_resource where major_id IN
+        <foreach collection="ids" item="item" separator="," close=")" open="(">
+            #{item}
+        </foreach>
+    </delete>
+
+</mapper>

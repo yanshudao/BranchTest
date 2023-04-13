@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.zd.dao.ZdMajorOrgDisableDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.zd.entity.ZdMajorOrgDisable" id="zdMajorOrgDisableMap">
+        <result property="id" column="id"/>
+        <result property="majorCode" column="major_code"/>
+        <result property="majorType" column="major_type"/>
+        <result property="studentType" column="student_type"/>
+        <result property="subjectType" column="subject_type"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+    <resultMap id="zdMajorOrgDisableVOMap" extends="zdMajorOrgDisableMap" type="io.renren.modules.zd.vo.ZdMajorOrgDisableVO">
+        <result property="majorName" column="major_name"/>
+        <result property="orgName" column="org_name"/>
+    </resultMap>
+
+    <select id="selectPageList" resultMap="zdMajorOrgDisableVOMap">
+     SELECT zzo.*,m.major_name,o.`org_name`,toOrg.org_name toOrgName
+     FROM zd_major_org_disable zzo
+       LEFT JOIN subject_major_base m ON zzo.`major_code`=m.`major_code`
+       LEFT JOIN sys_org o ON o.`org_code`=zzo.`org_code`
+       left join sys_org toOrg on toOrg.org_code=zzo.to_org_code
+       where 1=1
+   and (zzo.to_org_code=#{params.orgCode} or find_in_set(zzo.to_org_code,#{params.parentOrgCodes}))
+        and zzo.del_flag=0 and zzo.semester_code=#{params.semesterCode}
+        <if test="params.majorName!=null and params.majorName!=''">
+            and (
+            m.major_code like concat('%',#{params.majorName},'%')
+            or m.major_name like concat('%',#{params.majorName},'%')
+            )
+        </if>
+        <if test="params.subjectType!=null and params.subjectType!=''">
+            and zzo.subject_type=#{params.subjectType}
+        </if>
+        <if test="params.majorType!=null and params.majorType!=''">
+            and zzo.major_type=#{params.majorType}
+        </if>
+        <if test="params.studentType!=null and params.studentType!=''">
+            and zzo.student_type=#{params.studentType}
+        </if>
+
+        order by zzo.create_time desc
+
+    </select>
+    <select id="selectProvincePageList" resultMap="zdMajorOrgDisableVOMap">
+        SELECT zzo.*,m.major_name,o.`org_name`
+        FROM zd_major_org_disable zzo
+        LEFT JOIN subject_major_base m ON zzo.`major_code`=m.`major_code`
+        LEFT JOIN sys_org o ON o.`org_code`=zzo.`org_code`
+        where 1=1
+        and zzo.to_org_code=#{params.orgCode}
+        and zzo.del_flag=0 and zzo.semester_code=#{params.semesterCode}
+        <if test="params.majorName!=null and params.majorName!=''">
+            and (
+            m.major_code like concat('%',#{params.majorName},'%')
+            or m.major_name like concat('%',#{params.majorName},'%')
+            )
+        </if>
+        <if test="params.subjectType!=null and params.subjectType!=''">
+            and zzo.subject_type=#{params.subjectType}
+        </if>
+        <if test="params.majorType!=null and params.majorType!=''">
+            and zzo.major_type=#{params.majorType}
+        </if>
+        <if test="params.studentType!=null and params.studentType!=''">
+            and zzo.student_type=#{params.studentType}
+        </if>
+
+        order by zzo.create_time desc
+
+    </select>
+    <insert id="selectInsert">
+  insert ignore into zd_major_org_disable(
+    id,major_code,major_type,student_type,subject_type,org_code,to_org_code,semester_code,create_by,create_time)
+SELECT REPLACE(UUID(),'-',''),
+     zmo.major_code,zmo.major_type,zmo.student_type,zmo.subject_type,zmo.org_code,zmo.to_org_code,
+     #{insertMap.semesterCode},1,NOW() FROM zd_major_org_disable zmo
+     LEFT JOIN sys_org o ON o.org_code=zmo.to_org_code
+     WHERE zmo.semester_code=#{insertMap.preSemesterCode}
+     AND (zmo.to_org_code=#{insertMap.orgCode} OR FIND_IN_SET(#{insertMap.orgCode},o.parent_codes))
+
+    </insert>
+    <insert id="insertIgnoreByBatch">
+        insert ignore into
+        zd_major_org_disable(id,student_type,major_type,major_code,semester_code,subject_type,org_code,to_org_code,create_time,create_by)
+        values
+        <foreach collection="list" item="item" index="index"
+                 separator=",">
+            (
+            #{item.id}
+            ,#{item.studentType},#{item.majorType},#{item.majorCode},#{item.semesterCode},#{item.subjectType},#{item.orgCode},#{orgCode}
+            ,now(),#{userId})
+        </foreach>
+    </insert>
+
+
+</mapper>

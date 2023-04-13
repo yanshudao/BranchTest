@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.zd.dao.ZdOrderDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.zd.entity.ZdOrderEntity" id="zdOrderMap">
+        <result property="id" column="id_"/>
+        <result property="orderNo" column="order_no"/>
+        <result property="orderName" column="order_name"/>
+        <result property="fromOrgCode" column="from_org_code"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="delFlag" column="del_flag"/>
+        <result property="status" column="status"/>
+        <result property="semesterCode" column="semester_code"/>
+        <result property="orderPrice" column="order_price"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="mayang" column="mayang"/>
+        <result property="resourceCount" column="resource_Count"/>
+        <result property="shiyang" column="shiyang"/>
+        <result property="toOrgCode" column="to_org_code"/>
+        <result property="enable" column="enable_"/>
+        <result property="remark" column="remark_"/>
+    </resultMap>
+ <resultMap type="io.renren.modules.zd.vo.OrderVO" id="voMap">
+        <result property="id" column="id_"/>
+        <result property="orderNo" column="order_no"/>
+        <result property="orderName" column="order_name"/>
+        <result property="fromOrgCode" column="from_org_code"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="confirmTime" column="confirm_time"/>
+        <result property="delFlag" column="del_flag"/>
+        <result property="status" column="status"/>
+        <result property="semesterCode" column="semester_code"/>
+        <result property="orderPrice" column="order_price"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="mayang" column="mayang"/>
+        <result property="shiyang" column="shiyang"/>
+        <result property="toOrgCode" column="to_org_code"/>
+        <result property="enable" column="enable_"/>
+        <result property="remark" column="remark_"/>
+        <result property="realname" column="realname"/>
+        <result property="createName" column="create_name"/>
+        <result property="fromOrgName" column="org_name"/>
+    </resultMap>
+
+    <select id="selectListPage" resultMap="voMap">
+
+        SELECT ss.name semesterName,o.id_,o.order_no,
+        o.order_name,o.from_org_code,o.create_by,o.to_Org_Code,so.org_name,u.realname,u1.realname create_name,
+        SUM(zor.item_price*zor.order_num)mayang,sum(zor.order_num)resource_count,
+        o.status,o.confirm_time,o.remark_,o.note
+         FROM zd_order o
+        LEFT JOIN zd_order_resource zor ON o.id_=zor.order_id
+        LEFT JOIN sys_user u ON u.user_id=o.confirm_by
+        LEFT JOIN sys_user u1 ON u1.user_id=o.create_by
+        LEFT JOIN sys_org so ON so.org_code=o.from_org_code
+        left join subject_course c on c.id_=zor.course_id
+        left join sys_semester ss on ss.semester_code=o.semester_code
+        WHERE 1=1
+        <if test="params.orgCode!=null and params.orgCode!=''">
+            and o.from_org_code=#{params.orgCode}
+        </if>
+        <if test="params.orderNo!=null and params.orderNo!=''">
+            and (o.order_No like concat('%',#{params.orderNo},'%') or c.course_name like concat('%',#{params.orderNo},'%'))
+        </if>
+        <if test="params.toOrgCode!=null and params.toOrgCode!=''">
+            and  find_in_set(#{params.toOrgCode},so.parent_codes)
+        </if>
+
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            and o.semester_Code=#{params.semesterCode}
+        </if>
+        <if test="params.parentCode!=null and params.parentCode!=''">
+             and find_in_set(#{params.parentCode},so.parent_codes)
+        </if>
+       <!-- <if test="params.fromOrgCode!=null and params.fromOrgCode!=''">
+            and o.from_org_code=#{params.fromOrgCode}
+        </if>-->
+        <if test="params.status!=null and params.status!=''">
+            and o.status=#{params.status}
+        </if>
+        <if test="params.statusList!=null and params.statusList.size()>0">
+            and o.status in
+            <foreach collection="params.statusList" item="item" separator="," open="(" close=")">
+                #{item}
+            </foreach>
+        </if>
+        GROUP BY o.id_
+        order by ${params.orderBy}
+    </select>
+
+    <resultMap type="io.renren.modules.search.vo.StatisticsResourceVO" id="statisticsResourceVOMap">
+
+        <result property="studentType" column="student_type"/>
+        <result property="majorType" column="major_type"/>
+        <result property="semesterCode" column="semester_code"/>
+        <result property="semesterName" column="semester_name"/>
+        <result property="resourceCode" column="resource_Code"/>
+        <result property="resourceCount" column="resource_Count"/>
+        <result property="resourceName" column="resource_Name"/>
+        <result property="courseCode" column="course_Code"/>
+        <result property="courseName" column="course_Name"/>
+        <result property="majorCode" column="major_Code"/>
+        <result property="majorName" column="major_Name"/>
+        <result property="resourceType" column="resource_Type"/>
+        <result property="resourceVersion" column="resource_Version"/>
+        <result property="price" column="price"/>
+        <result property="fromOrgName" column="from_org_code"/>
+        <result property="areaName" column="area_Name"/>
+        <result property="status" column="status"/>
+    </resultMap>
+    <select id="selectStatisticsByMap" resultMap="statisticsResourceVOMap">
+SELECT om.major_type,om.student_type,m.major_code,m.major_name,c.course_code,c.course_name,r.resource_code,
+        r.resource_name,r.resource_version,r.isbn,r.resource_type,r.publishing_name,
+        (select s.name from sys_semester s where s.semester_code=a.semester_code)semester_name,
+        SUM(zr.order_num)resource_count,r.price,a.status,
+        (select o.org_name from sys_org o where o.org_code=a.from_org_code)from_org_code,
+        (select oa.area_name from sys_org_area oa where oa.area_code=o.area_code)area_name
+FROM zd_order_resource zr
+LEFT JOIN zd_order a ON a.id_=zr.order_id
+left join zd_major_Course_resource om on zr.zmcr_id=om.id_
+LEFT JOIN subject_resource r ON r.resource_code=om.resource_code
+LEFT JOIN subject_course c ON c.course_code=om.course_code
+LEFT JOIN subject_major_base m ON m.major_code=om.major_code
+left join sys_org o on o.org_code=a.from_org_code
+WHERE
+        1=1
+        <!-- 县级报订单据导出去掉此过滤-->
+        <!--<if test="params.modules!='export'.toString()">
+           and (a.status='3' or a.status='4')
+        </if>-->
+        <if test="params.ids!=null and params.ids.size()>0">
+            and a.id_ in
+            <foreach collection="params.ids" item="item" close=")" open="(" separator="," >
+                #{item}
+            </foreach>
+        </if>
+        <if test="params.orgCode!=null and params.orgCode!=''">
+            AND a.from_org_code=#{params.orgCode}
+        </if>
+        <if test="params.areaCode!=null and params.areaCode!=''">
+            AND o.area_code=#{params.areaCode}
+        </if>
+        <if test="params.toOrgCode!=null and params.toOrgCode!=''">
+            AND a.to_org_code=#{params.toOrgCode}
+        </if>
+        <if test="params.status!=null and params.status!=''">
+            AND a.status=#{params.status}
+        </if>
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            AND a.semester_code=#{params.semesterCode}
+        </if>
+        <if test="params.orderId!=null and params.orderId!=''">
+            AND a.id_=#{params.orderId}
+        </if>
+        <if test="params.submitTimeEndStr!=null and params.submitTimeEndStr!=''">
+            <![CDATA[ AND a.confirm_time<=#{params.submitTimeEndStr}]]>
+        </if>
+        <if test="params.submitTimeStartStr!=null and params.submitTimeStartStr!=''">
+            <![CDATA[ AND a.confirm_time>=#{params.submitTimeStartStr}]]>
+        </if>
+        <if test="params.resourceName!=null and params.resourceName!=''">
+            and ( r.resource_code like concat('%',#{params.resourceName},'%') or
+            r.resource_name like  concat('%',#{params.resourceName},'%')
+            )
+        </if>
+GROUP BY a.from_org_code,zr.id_,a.status
+
+
+
+    </select>
+    <select id="countByIdsAndStatus" resultType="java.lang.Integer">
+    select count(0) from zd_order where status=#{status} and  id_ in
+        <foreach collection="ids" open="(" close=")" separator="," item="item">
+            #{item}
+        </foreach>
+    </select>
+    <select id="selectCountByMap" resultType="java.lang.Integer">
+
+        select count(*) from zd_order
+        where 1=1
+        <if test="params.status!=null and params.status!=''">
+            and status=#{params.status}
+        </if>
+         <if test="params.semesterCode!=null and params.semesterCode!=''">
+            and semester_code=#{params.semesterCode}
+        </if>
+        <if test="params.toOrgCode!=null and params.toOrgCode!=''">
+            and to_Org_Code=#{params.toOrgCode}
+        </if>
+        <if test="params.idList!=null and params.idList.size()>0">
+            and id_ in
+            <foreach collection="params.idList" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        <if test="params.statusList!=null and params.statusList.size()>0">
+            and status in
+            <foreach collection="params.statusList" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+    </select>
+
+
+    <resultMap type="io.renren.modules.search.vo.StatisticsResourceDetailVO" id="statisticsResourceDetailVOMap">
+        <result property="studentType" column="student_type"/>
+        <result property="majorType" column="major_type"/>
+        <result property="semesterCode" column="semester_code"/>
+        <result property="semesterName" column="semester_name"/>
+        <result property="resourceCode" column="resource_Code"/>
+        <result property="resourceCount" column="resource_Count"/>
+        <result property="resourceName" column="resource_Name"/>
+        <result property="courseCode" column="course_Code"/>
+        <result property="courseName" column="course_Name"/>
+        <result property="majorCode" column="major_Code"/>
+        <result property="majorName" column="major_Name"/>
+        <result property="resourceType" column="resource_Type"/>
+        <result property="resourceVersion" column="resource_Version"/>
+        <result property="price" column="price"/>
+        <result property="fromOrgName" column="from_org_code"/>
+        <result property="areaName" column="area_Name"/>
+        <result property="status" column="status"/>
+        <result property="id" column="id"/>
+        <result property="orderNo" column="order_no"/>
+        <result property="confirmTime" column="confirm_time"/>
+    </resultMap>
+    <select id="selectStatisticsDetailByMap"
+          resultMap="statisticsResourceDetailVOMap">
+
+        SELECT m.major_type,m.student_type,m.major_code,m.major_name,c.course_code,c.course_name,r.resource_code,if(#{params.orgType}='1',
+        r.resource_name,'------')resource_name,r.resource_version,r.resource_type,r.publishing_name,
+        (select s.name from sys_semester s where s.semester_code=a.semester_code)semester_name,
+        SUM(zr.order_num)resource_count,r.price,a.status,
+        (select o.org_name from sys_org o where o.org_code=a.from_org_code)from_org_code,
+        (select oa.area_name from sys_org_area oa where oa.area_code=o.area_code)area_name,zr.id_ id,a.order_no,a.confirm_time
+        FROM zd_order_resource zr
+        LEFT JOIN zd_order a ON a.id_=zr.order_id
+        left join zd_major_course_resource zmcr on zmcr.id_=zr.zmcr_id
+        LEFT JOIN subject_resource r ON r.resource_code=zmcr.resource_code
+        LEFT JOIN subject_course c ON c.course_code=zmcr.course_code
+        LEFT JOIN subject_major_base m ON m.major_code=zmcr.major_code
+        left join sys_org o on o.org_code=a.from_org_code
+        WHERE
+        1=1
+        <!-- 县级报订单据导出去掉此过滤-->
+        <!--<if test="params.modules!='export'.toString()">
+           and (a.status='3' or a.status='4')
+        </if>-->
+        <if test="params.orgCode!=null and params.orgCode!=''">
+            AND a.from_org_code=#{params.orgCode}
+        </if>
+        <if test="params.areaCode!=null and params.areaCode!=''">
+            AND o.area_code=#{params.areaCode}
+        </if>
+        <if test="params.toOrgCode!=null and params.toOrgCode!=''">
+            AND a.to_org_code=#{params.toOrgCode}
+        </if>
+        <if test="params.status!=null and params.status!=''">
+            AND a.status=#{params.status}
+        </if>
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            AND a.semester_code=#{params.semesterCode}
+        </if>
+        <if test="params.orderId!=null and params.orderId!=''">
+            AND a.id_=#{params.orderId}
+        </if>
+        <if test="params.submitTimeEndStr!=null and params.submitTimeEndStr!=''">
+            <![CDATA[ AND a.confirm_time<=#{params.submitTimeEndStr}]]>
+        </if>
+        <if test="params.submitTimeStartStr!=null and params.submitTimeStartStr!=''">
+            <![CDATA[ AND a.confirm_time>=#{params.submitTimeStartStr}]]>
+        </if>
+        <if test="params.resourceName!=null and params.resourceName!=''">
+            and ( r.resource_code like concat('%',#{params.resourceName},'%') or
+            r.resource_name like  concat('%',#{params.resourceName},'%')
+            )
+        </if>
+        GROUP BY a.from_org_code,a.status,zr.id_
+
+
+
+    </select>
+
+
+</mapper>

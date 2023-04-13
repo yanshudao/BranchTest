@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.zd.dao.ZdRefundCartDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.zd.entity.ZdRefundCartEntity" id="zdRefundCartMap">
+        <result property="id" column="id_"/>
+        <result property="resourceId" column="resource_id"/>
+        <result property="catNum" column="cat_num"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="updateBy" column="update_by"/>
+    </resultMap>
+    <resultMap id="zdRefundCartVOMap" type="io.renren.modules.zd.vo.ZdRefundCartVO">
+        <result property="isbn"  column="isbn"/>
+        <result property="resourceName"  column="resource_name"/>
+        <result property="resourceType"  column="resource_type"/>
+        <result property="price"  column="price"/>
+    </resultMap>
+
+    <select id="selectListPage" resultMap="zdRefundCartVOMap">
+        select rc.*,r.resource_name,r.resource_type,r.price,r.isbn,semester.name refundSemesterName
+        from zd_refund_cart rc
+        left join subject_resource r on rc.resource_id=r.id_
+        left join sys_semester semester on semester.semester_code=rc.refund_semester_code
+        where rc.create_by=#{params.createBy}
+        <if test="params.supplierId!=null and params.supplierId!='' ">
+            and rc.supplier_id=#{params.supplierId}
+        </if>
+
+
+    </select>
+    <select id="selectByOwnAndResourceID" resultMap="zdRefundCartMap">
+
+        select rc.* from zd_refund_cart rc
+        where rc.create_by=#{userId} and rc.resource_id=#{resourceId}and rc.refund_semester_code=#{refundSemesterCode}
+    </select>
+    <select id="selectByIdsAndOwn" resultMap="zdRefundCartMap">
+
+        select rc.*,r.price
+        from zd_refund_cart rc
+        left join subject_resource r on rc.resource_id=r.id_
+        where rc.create_by=#{userId}
+        <if test="supplierId!=null and supplierId!=''">
+        and r.supplier_id=#{supplierId}
+        </if>
+        <if test="ids!=null and ids.size()>0">
+            and rc.id_ in
+            <foreach collection="ids" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+    </select>
+    <select id="selectCartTotal" resultType="java.math.BigDecimal">
+
+        select sum(zc.cat_num*r.price)total from zd_refund_cart zc
+        left join subject_resource r on zc.resource_id=r.id_
+        where 1=1
+        <if test="semesterCode!=null and semesterCode!=''">
+            and  zc.refund_semester_code=#{semesterCode}
+        </if>
+        <if test="params.userId!=null and params.userId!=''">
+            and  zc.create_by=#{params.userId}
+        </if>
+        <if test="params.orgCode!=null and params.orgCode!=''">
+            and  zc.org_code=#{params.orgCode}
+        </if>
+       <if test="params.notInIds!=null and params.notInIds.size()>0">
+           and zc.id_ not in
+           <foreach collection="params.notInIds" item="item" open="(" close=")" separator=",">
+               #{item}
+           </foreach>
+       </if>
+
+
+    </select>
+    <select id="selectSuppliers" resultType="java.lang.String">
+        select r.supplier_id
+        from zd_refund_cart rc
+        left join subject_resource r on rc.resource_id=r.id_
+        where 1=1 and  rc.create_by=#{userId}
+        group by r.supplier_id
+    </select>
+    <select id="selectCompany" resultType="io.renren.modules.sys.entity.SysCompanyEntity">
+        select id,company_name  from zd_refund_cart cart
+        left join sys_company c on cart.supplier_id=c.id
+        where
+    </select>
+
+    <delete id="deleteByCreateBy">
+        delete from zd_refund_cart
+        where create_by=#{userId}
+    </delete>
+
+</mapper>

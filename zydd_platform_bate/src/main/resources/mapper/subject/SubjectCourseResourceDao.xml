@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.subject.dao.SubjectCourseResourceDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.subject.entity.SubjectCourseResourceEntity" id="subjectCourseResourceMap">
+        <result property="id" column="id_"/>
+        <result property="courseId" column="course_id"/>
+        <result property="resourceId" column="resource_id"/>
+        <result property="orgId" column="org_id"/>
+        <result property="foreignId" column="foreign_id"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="enable" column="enable_"/>
+        <result property="remark" column="remark_"/>
+    </resultMap>
+    <update id="updateVersion">
+        update subject_course_resource
+        set resource_id=#{newResourceId}
+        where resource_id=#{oldResourceId}
+    </update>
+    <delete id="deleteByCourseIds">
+        delete from subject_course_resource where course_id in
+        <foreach collection="ids" open="(" close=")" separator="," item="item">
+            #{item}
+        </foreach>
+    </delete>
+    <delete id="deleteByResourceIds">
+        delete from subject_course_resource where resource_id in
+        <foreach collection="ids" open="(" close=")" separator="," item="item">
+            #{item}
+        </foreach>
+    </delete>
+
+
+</mapper>

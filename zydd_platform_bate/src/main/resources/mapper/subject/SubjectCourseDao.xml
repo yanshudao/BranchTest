@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.subject.dao.SubjectCourseDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.subject.entity.SubjectCourseEntity" id="subjectCourseMap">
+        <result property="id" column="id_"/>
+        <result property="courseCode" column="course_code"/>
+        <result property="courseName" column="course_name"/>
+        <result property="courseType" column="course_type"/>
+        <result property="courseNature" column="course_nature"/>
+        <result property="courseCredit" column="course_credit"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="version" column="version"/>
+        <result property="foreignId" column="foreign_id"/>
+        <result property="orgId" column="org_id"/>
+        <result property="moduleType" column="module_type"/>
+        <result property="status" column="status"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="enable" column="enable_"/>
+        <result property="remark" column="remark_"/>
+        <result property="majorCourseId" column="majorCourseId"/>
+        <result property="subjectType" column="subject_type"/>
+        <result property="orgName" column="org_name"/>
+    </resultMap>
+
+
+
+
+    <select id="selectListPage" resultMap="subjectCourseMap">
+        select c.*,o.org_name
+        <if test="params.majorId!=null and params.majorId!=''">
+        ,mc.id_ majorCourseId,mc.subject_type
+        </if>
+        from subject_course c
+        left join sys_org o on o.org_code=c.org_code
+        <if test="params.majorId!=null and params.majorId!=''">
+        left join subject_major_course mc on c.course_code=mc.course_code
+        left join subject_major_base m on m.major_code=mc.major_code
+        </if>
+        where 1=1
+        <if test="params.majorId!=null and params.majorId!=''">
+            and m.id_=#{params.majorId}
+        </if>
+        and c.org_code in (#{params.orgCode}
+        <if test="params.parentOrgCode!=null and params.parentOrgCode!=''">
+            ,#{params.parentOrgCode}
+        </if>
+        )
+        <if test="params.courseName!=null and params.courseName!=''">
+            and (
+            c.course_Name like concat('%',#{params.courseName},'%') or
+            c.course_code like concat('%',#{params.courseName},'%')
+            )
+        </if>
+        <if test="params.majorId!=null and params.majorId!=''">
+                <if test="params.semesterCode!=null and params.semesterCode!=''">
+                    and mc.semester_code=#{params.semesterCode}
+                </if>
+        </if>
+        <if test="params.majorId!=null and params.majorId!=''">
+            group by mc.course_code,mc.major_code
+        </if>
+        order by c.update_time desc,c.create_time desc
+
+    </select>
+    <select id="selectListCoursePage" resultMap="subjectCourseMap">
+SELECT c.* FROM subject_course c
+WHERE c.course_code NOT IN (
+        SELECT mc.course_code FROM subject_major_course mc
+        inner JOIN subject_major_base m ON m.`major_code`=mc.major_code
+        WHERE m.id_=#{params.majorCode}
+        and mc.semester_code=#{params.semesterCode}
+        AND (  find_in_set(mc.`org_code`,#{params.parentCodes}) or mc.org_code=#{params.orgCode})
+        group by course_code)
+      AND
+        (  find_in_set(c.`org_code`,#{params.parentCodes}) or c.org_code=#{params.orgCode})
+        <if test="params.courseName!=null and params.courseName!=''">
+            and (
+            c.course_Name like concat('%',#{params.courseName},'%') or
+            c.course_code like concat('%',#{params.courseName},'%')
+            )
+        </if>
+  order by  c.update_time desc,c.create_time desc
+    </select>
+    <select id="countByIds" resultType="java.lang.Integer">
+        select count(0) from subject_course
+        where id_  in
+        <foreach collection="ids" item="item" separator="," close=")" open="(">
+            #{item}
+        </foreach>
+    </select>
+    <select id="selectByCode" resultMap="subjectCourseMap">
+        select * from subject_course
+        where course_code=#{courseCode}
+    </select>
+</mapper>

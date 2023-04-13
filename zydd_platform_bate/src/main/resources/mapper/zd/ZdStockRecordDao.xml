@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.zd.dao.ZdStockRecordDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.zd.entity.ZdStockRecordEntity" id="zdStockRecordMap">
+        <result property="id" column="id_"/>
+        <result property="stockId" column="stock_id"/>
+        <result property="resourceId" column="resource_id"/>
+        <result property="amount" column="amount"/>
+        <result property="recordType" column="record_type"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="cost" column="cost"/>
+        <result property="semesterCode" column="semester_code"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="enable" column="enable_"/>
+        <result property="remark" column="remark_"/>
+    </resultMap>
+
+
+</mapper>

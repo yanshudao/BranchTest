@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.zd.dao.ZdSourceDao">
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.zd.entity.ZdSourceEntity" id="zdSourceMap">
+        <result property="id" column="id_"/>
+        <result property="sourceNo" column="source_no"/>
+        <result property="sourceName" column="source_name"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="semesterCode" column="semester_code"/>
+        <result property="remarks" column="remarks"/>
+        <result property="sourceType" column="source_type"/>
+        <result property="sourcePrice" column="source_price"/>
+        <result property="shiyang" column="shiyang"/>
+        <result property="foreignId" column="foreign_id"/>
+        <result property="supplierId" column="supplier_Id"/>
+        <result property="isSync" column="is_sync"/>
+        <result property="status" column="status"/>
+        <result property="linkman" column="linkman"/>
+        <result property="erpcode" column="erpcode"/>
+        <result property="zipCode" column="zip_code"/>
+        <result property="telephone" column="telephone"/>
+        <result property="note" column="note"/>
+    </resultMap>
+    <resultMap type="io.renren.modules.zd.vo.ZdSourceVO" id="zdSourceVOMap">
+        <result property="supplierName" column="supplier_Name"/>
+        <result property="orgName" column="org_name"/>
+        <result property="realname" column="realname"/>
+        <result property="semesterName" column="semester_name"/>
+        <result property="mayang" column="resource_mayang"/>
+        <result property="totalCount" column="totalCount"/>
+        <result property="sendCount" column="sendCount"/>
+        <result property="deleteCount" column="deleteCount"/>
+    </resultMap>
+    <update id="updateAddress">
+        update zd_source
+        set note=#{note},
+        linkman=#{linkman},
+        address=#{address},
+        telephone=#{telephone},
+        remarks=#{remarks},
+        zip_code=#{zipCode}
+        where id_=#{id}
+    </update>
+
+    <select id="selectListPage" resultMap="zdSourceVOMap">
+        SELECT COUNT(0)totalCount,SUM(IF(sr.status='4',1,0))deleteCount,SUM(IF(sr.status='3',1,0))sendCount,
+        s.*,c.company_Name supplier_Name,SUM(sr.`source_num`)resource_num,
+        SUM(sr.`source_num`*sr.resource_price)resource_mayang,u.realname,o.org_name,(select ss.name from sys_semester ss where s.semester_code=ss.semester_code)semester_name
+        FROM zd_source s
+        LEFT JOIN zd_source_resource sr ON s.id_=sr.source_id
+        LEFT JOIN subject_resource r ON r.id_=sr.`resource_id`
+        LEFT JOIN sys_company c ON s.supplier_Id=c.id_
+        left join sys_user u on u.user_id=s.create_by
+        left join sys_org o on o.org_code=s.to_org_code
+        WHERE 1=1
+        <if test="params.orgCode!=null and params.orgCode!=''">
+            and s.org_code=#{params.orgCode}
+        </if>
+        <if test="params.parentOrgCode!=null and params.parentOrgCode!=''">
+            AND ( find_in_set(#{params.parentOrgCode},o.parent_codes) or s.org_code=#{params.parentOrgCode} )
+        </if>
+         <if test="params.notEqStatus!=null and params.notEqStatus!=''">
+            and s.status!=#{params.notEqStatus}
+        </if>
+        <if test="params.orgList!=null and params.orgList.size()>0">
+            and s.org_code in 
+            <foreach collection="params.orgList" separator="," open="(" close=")" item="item">
+                #{item.orgCode}
+            </foreach>
+        </if>
+        <if test="params.toOrgCode!=null and params.toOrgCode!=''">
+            and s.to_org_code=#{params.toOrgCode}
+        </if>
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            and s.semester_code=#{params.semesterCode}
+        </if>
+        <if test="params.status!=null and params.status!=''">
+            and s.status=#{params.status}
+        </if>
+        <if test="params.isSync!=null and params.isSync!=''">
+            and s.is_Sync=#{params.isSync}
+        </if>
+        <if test="params.sourceNo!=null and params.sourceNo!=''">
+            and ( s.source_no like concat('%',#{params.sourceNo},'%') or
+            s.source_name like  concat('%',#{params.sourceName},'%')
+            )
+        </if>
+        group by s.id_
+        order by s.create_time desc,s.is_sync
+    </select>
+    <select id="selectBySourceNo" resultMap="zdSourceMap">
+
+        select s.* from zd_source s
+        where s.source_no=#{sourceNo}
+
+    </select>
+    <resultMap type="io.renren.modules.search.vo.StatisticsSourceResourceVO" id="statisticsResourceVOMap">
+
+        <result property="semesterCode" column="semester_code"/>
+        <result property="semesterName" column="semester_name"/>
+        <result property="resourceCode" column="resource_Code"/>
+        <result property="resourceCount" column="resource_Count"/>
+        <result property="resourceName" column="resource_Name"/>
+        <result property="resourceType" column="resource_Type"/>
+        <result property="resourceVersion" column="resource_Version"/>
+        <result property="price" column="price"/>
+        <result property="totalPrice" column="total_price"/>
+    </resultMap>
+    <select id="selectStatisticsByMap" resultMap="statisticsResourceVOMap">
+
+
+       SELECT r.resource_code,r.resource_name,r.resource_version,r.resource_Type,
+        SUM(r.price*zr.source_num)total_price,
+        SUM(zr.source_num)resource_count,
+        r.price,r.publishing_Name,
+        (select s.name from sys_semester s where s.semester_code=a.semester_code)semester_name,
+        (select c.company_name from sys_company c where c.id_=r.supplier_id )supplier_Name
+       FROM zd_source_resource zr
+        LEFT JOIN zd_source a ON a.id_=zr.source_id
+        LEFT JOIN subject_resource r ON r.id_=zr.resource_id
+        WHERE 1=1
+        <if test="params.supplierId!=null and params.supplierId!=''">
+            AND a.supplier_id=#{params.supplierId}
+        </if>
+        <if test="params.orgCode!=null and params.orgCode!=''">
+            AND a.org_code=#{params.orgCode}
+        </if>
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            AND a.semester_code=#{params.semesterCode}
+        </if>
+        <if test="params.sourceId!=null and params.sourceId!=''">
+            AND a.id_=#{params.sourceId}
+        </if>
+        <if test="params.resourceName!=null and params.resourceName!=''">
+            and ( r.resource_code like concat('%',#{params.resourceName},'%') or
+             r.resource_name like  concat('%',#{params.resourceName},'%')
+            )
+        </if>
+      GROUP BY a.org_code,zr.resource_id
+
+
+    </select>
+    <select id="countByMap" resultType="java.lang.Integer">
+        select count(0) from zd_source
+        where 1=1
+        <if test="params.notEqIsSync!=null and params.notEqIsSync!=''">
+            and is_sync!=#{params.notEqIsSync}
+        </if>
+        <if test="params.isSync!=null and params.isSync!=''">
+            and is_sync=#{params.isSync}
+        </if>
+        <if test="params.ids!=null and params.ids.size()>0">
+            and id_ in
+            <foreach collection="params.ids" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+
+    </select>
+    <resultMap type="io.renren.modules.search.vo.StatisticsSourceResourceDetailVO" id="statisticsSourceResourceDetailVOMap">
+        <result property="semesterCode" column="semester_code"/>
+        <result property="semesterName" column="semester_name"/>
+        <result property="resourceCode" column="resource_Code"/>
+        <result property="isbn" column="isbn"/>
+        <result property="resourceCount" column="resource_Count"/>
+        <result property="resourceName" column="resource_Name"/>
+        <result property="resourceType" column="resource_Type"/>
+        <result property="resourceVersion" column="resource_Version"/>
+        <result property="price" column="price"/>
+        <result property="totalPrice" column="total_price"/>
+        <result property="id" column="id"/>
+        <result property="sourceNo" column="source_No"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="orgName" column="org_name"/>
+    </resultMap>
+    <select id="selectStatisticsDetailByMap"
+        resultMap="statisticsSourceResourceDetailVOMap" >
+
+        SELECT r.resource_code,r.resource_name,r.resource_version,r.isbn,r.resource_Type,r.price,
+        SUM(r.price*zr.source_num)total_price,
+        SUM(zr.source_num)resource_count,
+        r.price,r.publishing_Name,zr.id_ id,s.source_No,
+        (select s1.name from sys_semester s1 where s1.semester_code=s.semester_code)semester_name,
+        (select c.company_name from sys_company c where c.id_=r.supplier_id )supplier_Name,
+        o.org_name,o.org_code,zr.status,s.remarks,s.note
+        FROM zd_source_resource zr
+        left join zd_source s on zr.source_id=s.id_
+
+        LEFT JOIN subject_resource r ON r.id_=zr.resource_id
+        left join sys_org o on o.org_code=s.to_org_code
+        WHERE 1=1
+        <if test="params.supplierId!=null and params.supplierId!=''">
+            AND s.supplier_id=#{params.supplierId}
+        </if>
+         <if test="params.sourceIds!=null and params.sourceIds.size()>0">
+            AND s.id_ in
+            <foreach collection="params.sourceIds" item="item" close=")" open="(" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        <if test="params.orgCode!=null and params.orgCode!=''">
+            AND s.org_code=#{params.orgCode}
+        </if>
+         <if test="params.toOrgCode!=null and params.toOrgCode!=''">
+            AND s.to_org_code=#{params.toOrgCode}
+        </if>
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            AND s.semester_code=#{params.semesterCode}
+        </if>
+        <if test="params.sourceId!=null and params.sourceId!=''">
+            AND s.id_=#{params.sourceId}
+        </if>
+        <if test="params.resourceName!=null and params.resourceName!=''">
+            and ( r.resource_code like concat('%',#{params.resourceName},'%') or
+            r.resource_name like  concat('%',#{params.resourceName},'%')
+            )
+        </if>
+        GROUP BY s.org_code,zr.resource_id,zr.id_
+    </select>
+
+
+</mapper>

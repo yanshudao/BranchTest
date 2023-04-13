@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.sys.dao.SysNoticeDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.sys.entity.SysNoticeEntity" id="sysOrgNoticeMap">
+        <result property="id" column="id_"/>
+        <result property="noticeTitle" column="notice_title"/>
+        <result property="noticeContent" column="notice_content"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="createTime" column="create_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="filePath" column="file_path"/>
+    </resultMap>
+    <select id="selectListPage" resultMap="sysOrgNoticeMap">
+        select a.*,u.realname
+        from sys_notice a
+        LEFT JOIN sys_notice_org sno ON sno.`notice_id`=a.`id_`
+        left join sys_user u on u.user_id=a.create_by
+        left join sys_org o on o.org_code=u.org_code
+        where 1=1
+
+        <if test="params.createOrgCode!=null and params.createOrgCode!=''">
+            and a.org_code=#{params.createOrgCode}
+        </if>
+          <if test="params.keyword!=null and params.keyword!=''">
+            and a.notice_title like concat('%',#{params.keyword},'%')
+        </if>
+        <if test="params.isShow!=null and params.isShow!=''">
+            and a.is_show=#{params.isShow}
+        </if>
+        <if test="params.show == 1 ">
+           and (find_in_set(a.org_code,#{params.parentOrgCodes}) or a.org_code=#{params.orgCode})
+           AND (
+            a.show_scope=0  OR
+             ( a.show_scope=1 AND sno.`org_id` =#{params.orgId})
+            )
+        </if>
+        GROUP BY a.id_
+        ORDER BY a.`create_time` DESC
+    </select>
+    <select id="selectNoRead" resultMap="sysOrgNoticeMap">
+
+        select a.*,u.realname
+        from sys_notice a
+        LEFT JOIN sys_notice_org sno ON sno.`notice_id`=a.`id_`
+        left join sys_user u on u.user_id=a.create_by
+        left join sys_org o on o.org_code=u.org_code
+        where 1=1
+
+        <if test="params.createOrgCode!=null and params.createOrgCode!=''">
+            and a.org_code=#{params.createOrgCode}
+        </if>
+        <if test="params.notInIds!=null and params.notInIds.size()>0">
+            and a.id_ not in
+            <foreach collection="params.notInIds" item="item" separator="," close=")" open="(">
+            #{item}
+            </foreach>
+        </if>
+        <if test="params.isShow!=null and params.isShow!=''">
+            and a.is_show=#{params.isShow}
+        </if>
+        <if test="params.show == 1 ">
+            and (find_in_set(a.org_code,#{params.parentOrgCodes}) or a.org_code=#{params.orgCode})
+            AND (
+            a.show_scope=0  OR
+            ( a.show_scope=1 AND sno.`org_id` =#{params.orgId})
+            )
+        </if>
+        <if test="params.isRead == 1 ">
+            and not exists (
+            select notice_id,user_id,count(0) from
+            sys_notice_record
+            where user_id=#{params.userId}
+            and notice_id=a.id_
+            GROUP BY notice_id,user_id
+            HAVING COUNT(0)>2
+            )
+        </if>
+        GROUP BY a.id_
+        ORDER BY a.`create_time` DESC
+        limit 1
+    </select>
+    <select id="countNoRead" resultType="java.lang.Integer">
+        select count(0) from (
+        select a.*,u.realname
+        from sys_notice a
+        LEFT JOIN sys_notice_org sno ON sno.`notice_id`=a.`id_`
+        left join sys_user u on u.user_id=a.create_by
+        left join sys_org o on o.org_code=u.org_code
+        where 1=1
+        <if test="params.notInIds!=null and params.notInIds.size()>0">
+            and a.id_ not in
+            <foreach collection="params.notInIds" item="item" separator="," close=")" open="(">
+                #{item}
+            </foreach>
+        </if>
+        <if test="params.createOrgCode!=null and params.createOrgCode!=''">
+            and a.org_code=#{params.createOrgCode}
+        </if>
+        <if test="params.isShow!=null and params.isShow!=''">
+            and a.is_show=#{params.isShow}
+        </if>
+        <if test="params.show == 1 ">
+            and (find_in_set(a.org_code,#{params.parentOrgCodes}) or a.org_code=#{params.orgCode})
+            AND (
+            a.show_scope=0  OR
+            ( a.show_scope=1 AND sno.`org_id` =#{params.orgId})
+            )
+        </if>
+        <if test="params.isRead == 1 ">
+            and not exists (
+            select notice_id,user_id,count(0) from
+            sys_notice_record where user_id=#{params.userId}
+            and notice_id=a.id_
+            GROUP BY notice_id,user_id
+            HAVING COUNT(0)>2
+            )
+        </if>
+
+        GROUP BY a.id_
+
+        ) a
+    </select>
+
+
+</mapper>

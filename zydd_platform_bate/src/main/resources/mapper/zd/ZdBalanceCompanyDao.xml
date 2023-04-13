@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.zd.dao.ZdBalanceCompanyDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.zd.entity.ZdBalanceCompanyEntity" id="zdBalanceCompanyMap">
+        <result property="id" column="id_"/>
+        <result property="balanceCompanyNo" column="balance_company_no"/>
+        <result property="semesterCode" column="semester_code"/>
+        <result property="discountRate" column="discount_rate"/>
+        <result property="incomePriceTotal" column="income_price_total"/>
+        <result property="refundPriceTotal" column="refund_price_total"/>
+        <result column="refund_Price_Shiyang" property="refundPriceShiyang" jdbcType="DECIMAL" />
+        <result column="income_Price_Shiyang" property="incomePriceShiyang" jdbcType="DECIMAL" />
+        <result property="mayang" column="mayang"/>
+        <result property="shiyang" column="shiyang"/>
+        <result property="balanceStatus" column="balance_status"/>
+        <result property="auditStatus" column="audit_status"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="companyName" column="company_Name"/>
+        <result property="orgName" column="org_Name"/>
+        <result property="companyId" column="company_Id"/>
+        <result property="orgCode" column="org_code"/>
+    </resultMap>
+
+    <resultMap type="io.renren.modules.zd.vo.ZdBalanceCompanyVO" id="zdBalanceVOMap" extends="zdBalanceCompanyMap">
+        <result property="needPay" column="needPay"/>
+        <result property="totalPay" column="total_pay"/>
+
+    </resultMap>
+    <select id="selectListPage"  resultMap="zdBalanceVOMap">
+        SELECT b.*,(SELECT s.name FROM sys_semester s WHERE s.semester_code=b.semester_code)semesterCodeName,
+        (SELECT c.org_name FROM sys_org c WHERE c.org_code=b.to_org_code)org_Name,
+        (SELECT c.company_name FROM sys_company c WHERE c.id_=b.company_id)company_name,
+        SUM(bp.pay_money)total_pay,(b.shiyang-ifnull(sum(bp.pay_money),0))needPay
+        FROM zd_balance_company b
+        LEFT JOIN zd_balance_company_pay bp ON bp.balance_company_id=b.id_
+        WHERE 1=1
+        <if test="params.createBy!=null and params.createBy!=''">
+            and b.create_by=#{params.createBy}
+        </if>
+        <if test="params.toOrgCode!=null and params.toOrgCode!=''">
+            and b.to_Org_Code=#{params.toOrgCode}
+        </if>
+
+        <if test="params.semesterCode!=null and params.semesterCode!=''">
+            and b.semester_code=#{params.semesterCode}
+        </if>
+        <if test="params.balanceNo!=null and params.balanceNo!=''">
+            and b.balance_company_no lik concat('%',#{params.balanceNo},'%')
+        </if>
+        <if test="params.createTime!=null and params.createTime!=''">
+            and b.create_time>=#{params.createTime}
+        </if>
+        <if test="params.endTime!=null and params.endTime!=''">
+            <![CDATA[ and b.create_time<=#{params.endTime}	]]>
+        </if>
+        GROUP BY b.id_
+        order by b.create_time desc
+
+
+    </select>
+    <select id="listBalanceVO"  resultMap="zdBalanceVOMap">
+
+        SELECT b.id_,sum(b.income_price_total)income_price_total,sum(refund_price_total)refund_price_total,avg(discount_rate)discount_rate,
+        sum(mayang)mayang,sum(shiyang),sum(income_price_shiyang)income_price_shiyang,sum(refund_price_shiyang)refund_price_shiyang,
+        (SELECT s.name FROM sys_semester s WHERE s.semester_code=b.semester_code)semesterCodeName,
+        (SELECT c.org_name FROM sys_org c WHERE c.org_code=b.to_org_code)org_Name,
+        (SELECT c.company_name FROM sys_company c WHERE c.id_=b.company_id)company_name,
+        SUM(bp.pay_money)total_pay,(b.shiyang-ifnull(sum(bp.pay_money),0))needPay
+        FROM zd_balance_company b
+        LEFT JOIN zd_balance_company_pay bp ON bp.balance_company_id=b.id_
+        WHERE 1=1 and b.semester_code=#{semesterCode} and b.to_org_code=#{orgCode}
+         GROUP BY b.semester_code,b.to_org_code
+        order by b.create_time desc
+    </select>
+
+
+</mapper>

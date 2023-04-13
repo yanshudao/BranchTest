@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.zd.dao.ZdBalancePublishDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.zd.entity.ZdBalancePublishEntity" id="zdBalancePublishMap">
+        <result property="id" column="id"/>
+        <result property="balanceId" column="balance_id"/>
+        <result property="publishId" column="publish_id"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <resultMap type="io.renren.modules.zd.vo.ZdBalancePublishDetailVO" extends="io.renren.modules.zd.dao.ZdPublishResourceDao.zdPublishResourceMap" id="publishResourceVOMap">
+        <result property="resourceCode" column="resource_code"/>
+        <result property="resourceName" column="resource_name"/>
+        <result property="isbn" column="isbn"/>
+        <result property="catalogId" column="catalog_id"/>
+        <!--<result property="publishPrice" column="publish_price"/>-->
+        <!--<result property="mayng" column="mayng"/>-->
+        <!--<result property="publishNum" column="publish_num"/>-->
+        <result property="resourceType" column="resource_type"/>
+        <result property="nitemdiscountrate" column="nitemdiscountrate"/>
+        <result property="totalNum" column="total_num"/>
+        <result property="publishCreateTime" column="publish_Create_Time"/>
+    </resultMap>
+
+    <select id="queryBalancePublishById" resultType="io.renren.modules.zd.vo.ZdBalancePublishDetailVO">
+
+        select pr.id_,r.resource_name,r.isbn,
+r.resource_code,pr.publish_price,pr.publish_num,r.resource_type,
+pr.mayng,pr.shiyang,pr.nitemdiscountrate
+ from zd_balance_publish p
+ left join
+ zd_publish_resource pr on p.publish_id=pr.publish_id
+left join subject_resource r on r.id_=pr.resource_id
+where p.balance_id=#{balanceId}
+    </select>
+
+    <resultMap id="zdBalancePublishVOMap" type="io.renren.modules.zd.vo.ZdBalancePublishVO">
+        <result property="publishNo" column="publish_no"/>
+        <result property="logisticNo" column="logistic_no"/>
+        <result property="createTime" column="create_time"/>
+        <result property="totalResourceNum" column="total_resource_num"/>
+        <result property="totalPublish" column="total_Publish"/>
+        <result property="realname" column="realname"/>
+        <result property="fromOrgName" column="from_org_name"/>
+        <result property="toOrgName" column="to_org_name"/>
+        <result property="semesterName" column="semester_name"/>
+        <result property="shiyang" column="shiyang"/>
+        <result property="mayang" column="mayang"/>
+    </resultMap>
+    <select id="queryBalancePublish" resultMap="zdBalancePublishVOMap">
+
+
+        SELECT p.create_time,p.logistic_no,p.publish_no,
+        SUM(pr.publish_num)total_resource_num,
+        SUM(pr.publish_num*pr.publish_price)total_publish,
+        SUM(pr.mayng)mayang,
+        SUM(pr.shiyang)shiyang,
+        (SELECT u.realname FROM sys_user u WHERE u.user_id=p.`create_by` )realname,
+        (SELECT o.org_name FROM sys_org o WHERE o.org_code=p.`to_org_code`)to_org_name,(SELECT s.name FROM sys_semester s WHERE s.semester_code=p.`semester_code`)semester_name
+        FROM zd_balance_publish bp
+        left join zd_balance b on bp.balance_id=b.id_
+        LEFT JOIN zd_publish p ON p.id_=bp.publish_id
+        LEFT JOIN zd_publish_resource pr ON pr.publish_id=bp.publish_id
+        where
+        GROUP BY b
+
+    </select>
+    <select id="queryBalancePublishDetail" resultMap="publishResourceVOMap">
+
+
+        select pr.id_,r.resource_name,r.isbn,
+r.resource_code,pr.publish_price,pr.publish_num,r.resource_type,sum(pr.publish_num)total_num,p.create_time publish_Create_Time,
+sum(pr.mayng)mayng,sum(pr.shiyang)shiyang,avg(pr.nitemdiscountrate)nitemdiscountrate
+ from
+        zd_balance a inner join zd_balance_publish p on a.id_=p.balance_id
+  left join zd_publish_resource pr on p.publish_id=pr.publish_id
+left join subject_resource r on r.id_=pr.resource_id
+where a.semester_code=#{semesterCode} and a.low_level_org=#{orgCode}
+<if test="balanceId!=null and balanceId!=''">
+    and a.id_=#{balanceId}
+</if>
+group by pr.resource_id,a.semester_code,a.low_level_org
+    </select>
+
+</mapper>

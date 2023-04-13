@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.sys.dao.SysOrgSettingDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.sys.entity.SysOrgSettingEntity" id="sysOrgSettingMap">
+        <result property="id" column="id_"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="toOrgCode" column="to_org_code"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="orderType" column="order_type"/>
+        <result property="publishDiscount" column="publish_discount"/>
+        <result property="payDiscount" column="pay_discount"/>
+        <result property="payOrgCode" column="pay_org_code"/>
+        <result property="enable" column="enable_"/>
+        <result property="remark" column="remark_"/>
+        <result property="address" column="address"/>
+        <result property="zipCode" column="zip_code"/>
+        <result property="person" column="person"/>
+        <result property="custCode" column="cust_code"/>
+        <result property="usercode" column="usercode"/>
+        <result property="telPhone" column="tel_phone"/>
+        <result property="orgName" column="org_name"/>
+        <result property="toOrgId" column="to_org_id"/>
+    </resultMap>
+    <update id="updateRateConfig">
+        update sys_org_setting
+        <if test="rateConfig=='1'">
+            set is_config_rate1=#{status}
+        </if>
+        <if test="rateConfig=='2'">
+            set is_config_rate2=#{status}
+        </if>
+        <if test="rateConfig=='3'">
+            set is_config_rate3=#{status}
+        </if>
+    </update>
+
+    <select id="selectByOrg" resultMap="sysOrgSettingMap">
+        SELECT os.*,
+        (SELECT o.org_name FROM sys_org o WHERE o.org_code=os.org_code )org_name,
+        (SELECT o.id_ FROM sys_org o WHERE o.org_code=os.to_org_code )to_org_id
+        FROM sys_org_setting os
+        where os.org_code=#{orgCode}
+    </select>
+
+</mapper>

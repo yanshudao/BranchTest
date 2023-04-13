@@ -1,0 +1,655 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.subject.dao.SubjectResourceDao">
+
+	<!-- 可根据自己的需求，是否要使用 -->
+    <resultMap type="io.renren.modules.subject.entity.SubjectResourceEntity" id="subjectResourceMap">
+        <result property="id" column="id_"/>
+        <result property="catalogId" column="catalog_id"/>
+        <result property="resourceName" column="resource_name"/>
+        <result property="resourceCode" column="resource_code"/>
+        <result property="resourceVersion" column="resource_version"/>
+        <result property="author" column="author"/>
+        <result property="bcBs" column="bc_bs"/>
+        <result property="bcJs" column="bc_js"/>
+        <result property="isbn" column="isbn"/>
+        <result property="price" column="price"/>
+        <result property="publishDate" column="publish_date"/>
+        <result property="deleteFlag" column="delete_flag"/>
+        <result property="supplierId" column="supplier_id"/>
+        <result property="publishingId" column="publishing_id"/>
+        <result property="pic" column="pic"/>
+        <result property="foreignId" column="foreign_id"/>
+        <result property="content" column="content"/>
+        <result property="resourceType" column="resource_type"/>
+        <result property="isPublish" column="is_publish"/>
+        <result property="isRecommend" column="is_recommend"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="orgId" column="org_id"/>
+        <result property="orgCode" column="org_code"/>
+        <result property="catalogCode" column="catalog_code"/>
+        <result property="enable" column="enable_"/>
+        <result property="remark" column="remark_"/>
+        <result property="courseResourceId" column="course_Resource_Id"/>
+        <result property="publishingName" column="publishing_Name"/>
+        <result property="supplierName" column="supplier_Name"/>
+        <result property="orgName" column="org_name"/>
+        <result property="isArchives" column="is_archives"/>
+        <result property="isShow" column="is_show"/>
+        <result property="resourceScope" column="resource_scope"/>
+    </resultMap>
+    <resultMap type="io.renren.modules.subject.vo.ZdOrgResourceVO" id="zdResourceVOMap" extends="subjectResourceMap">
+        <result property="totalAmount" column="total_amount"/>
+        <result property="totalZd" column="total_zd"/>
+        <result property="totalSource" column="total_source"/>
+        <result property="totalAudit" column="total_audit"/>
+        <result property="incomeNum" column="income_num"/>
+        <result property="ids" column="ids"/>
+    </resultMap>
+    <resultMap type="io.renren.modules.zd.vo.ZdSourceIncomeVO" extends="subjectResourceMap" id="zdSourceIncomeMap">
+        <result property="totalIncome" column="totalIncome"/>
+        <result property="totalSource" column="totalSource"/>
+        <result property="needTotalIncome" column="need_income_num"/>
+        <result property="confirmTotalIncome" column="confirm_income_num"/>
+    </resultMap>
+
+    <delete id="deleteByByForeignId">
+        delete from subject_resource where foreign_id=#{foreignId}
+
+    </delete>
+
+
+    <select id="selectListPage" resultMap="subjectResourceMap">
+        select DISTINCT r.*,c.company_name supplier_Name,rt.name catalogName,
+        (select o.org_name from sys_org o where o.org_code=r.org_code)org_name
+        <if test="params.courseId!=null and params.courseId!=''">
+            ,cr.id_ course_resource_id
+        </if>
+        from
+
+        subject_resource r
+        left join subject_resource_type rt on r.catalog_id=rt.id
+        left join sys_company c on c.id_=r.supplier_Id
+        <if test="params.courseId!=null and params.courseId!=''">
+        left join subject_course_resource cr on r.id_=cr.resource_id
+        </if>
+        where 1=1
+        and r.org_code in (#{params.orgCode}
+        <if test="params.parentOrgCode!=null and params.parentOrgCode!=''">
+            ,#{params.parentOrgCode}
+        </if>
+        )
+        <if test="params.courseId!=null and params.courseId!=''">
+            and cr.course_id=#{params.courseId}
+        </if>
+         <if test="params.isShow!=null and params.isShow!=''">
+            and r.is_show=#{params.isShow}
+        </if>
+        <if test="params.resourceType!=null and params.resourceType!=''">
+            and r.resource_type=#{params.resourceType}
+        </if>
+        <if test="params.supplierId!=null and params.supplierId!=''">
+            and c.id_=#{params.supplierId}
+        </if>
+        <if test="params.resourceTypeList!=null and params.resourceTypeList.size()>0">
+            and r.catalog_id in
+            <foreach collection="params.resourceTypeList" item="item" close=")" open="(" separator=",">
+                #{item.typeId}
+            </foreach>
+        </if>
+        <if test="params.resourceName!=null and params.resourceName!=''">
+            and (
+            r.resource_Name like concat('%',#{params.resourceName},'%')
+            or
+            r.resource_code like concat('%',#{params.resourceName},'%')
+            )
+        </if>
+    </select>
+    <select id="selectListResourcePage" resultMap="subjectResourceMap">
+
+SELECT r.*,c.company_name supplier_Name
+        FROM subject_resource r
+  left join sys_company c on c.id_=r.supplier_Id
+WHERE r.id_ NOT IN (
+SELECT resource_id FROM subject_course_resource
+        WHERE course_id=#{params.courseId}
+        AND `org_code` IN (#{params.orgCode},#{params.parentOrgCode})
+)
+AND r.`org_code` IN (#{params.orgCode},#{params.parentOrgCode})
+        <if test="params.resourceName!=null and params.resourceName!=''">
+            and (
+            r.resource_Name like concat('%',#{params.resourceName},'%')
+            or
+            r.resource_code like concat('%',#{params.resourceName},'%')
+            )
+        </if>
+    </select>
+    <select id="selectByForeignId" resultMap="subjectResourceMap">
+
+        select r.* from subject_resource r
+        where r.foreign_id=#{foreignId}
+    </select>
+    <select id="selectZdResourceByMap" resultMap="zdResourceVOMap">
+    SELECT r.*,IFNULL(zs.total_amount,0)total_amount,
+
+     IFNULL(SUM(zd_t.`order_num`),0)total_zd,
+
+    0 total_audit FROM subject_resource r
+    LEFT JOIN zd_stock zs ON zs.`resource_id`=r.`id_`
+
+        LEFT JOIN
+        (SELECT zor.* FROM zd_order zo
+        LEFT JOIN zd_order_resource zor ON zo.id_=zor.order_id
+        WHERE zo.`status` in('3','4')
+        and zo.to_org_code=#{params.orgCode}
+        <if test="params.orgList!=null and params.orgList.size()>0">
+            and zo.org_code in
+            <foreach collection="params.orgList" item="item" open="(" close=")" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        ) zd_t ON zd_t.resource_id=r.id_
+    WHERE 1=1
+        <if test="params.supplierId!=null and params.supplierId!=''">
+            and r.supplier_id=#{params.supplierId}
+        </if>
+        <if test="params.resourceName!=null and params.resourceName!=''">
+            and (r.resource_Name like concat('%',#{params.resourceName},'%')
+            or r.resource_code like concat('%',#{params.resourceName},'%'))
+        </if>
+        and r.org_code in (#{params.orgCode},#{params.parentOrgCode})
+    GROUP BY r.id_
+    HAVING SUM(zd_t.`order_num`)>0
+    ORDER BY SUM(zd_t.`order_num`) DESC
+    </select>
+    <select id="selectAllResourceByMap" resultMap="zdResourceVOMap">
+
+    SELECT r.*,IFNULL(zd_t.total_zd,0)total_zd,ifnull(s.total_source,0)total_source,IFNULL(zs.total_amount,0)total_amount,ifnull(a.income_num,0)income_num, 0 total_audit
+    FROM subject_resource r
+    LEFT JOIN zd_stock zs ON zs.`resource_id`=r.`id_` and zs.org_code=#{params.orgCode}
+    LEFT JOIN (
+    SELECT SUM(sr.source_num)total_source,sr.resource_id FROM zd_source s
+    LEFT JOIN zd_source_resource sr ON s.id_=sr.source_id
+    WHERE s.org_code=#{params.orgCode} AND s.semester_code=#{params.semesterCode}
+    GROUP BY sr.resource_id
+    )s ON s.resource_id=r.id_
+        left join (
+        select sum(sr.income_num)income_num,s.org_code,sr.resource_id from zd_stock_income s
+        left join zd_stock_income_resource sr on s.id_=sr.income_id
+        where s.org_code=#{params.orgCode} and s.semester_code=#{params.semesterCode}
+        group by sr.resource_id)a on a.resource_id=r.id_
+    left join
+        (SELECT sum(zor.order_num)total_zd,zor.resource_id,zo.semester_code FROM zd_order zo
+        LEFT JOIN zd_order_resource zor ON zo.id_=zor.order_id
+        WHERE zo.`status` in('3','4')
+        and zo.to_org_code=#{params.orgCode} and zo.semester_code=#{params.semesterCode}
+       group by zor.resource_id
+        ) zd_t ON zd_t.resource_id=r.id_
+    WHERE 1=1
+        <if test="params.resourceTypeList!=null and params.resourceTypeList.size()>0">
+            and r.catalog_id in
+            <foreach collection="params.resourceTypeList" item="item" close=")" open="(" separator=",">
+                #{item.typeId}
+            </foreach>
+        </if>
+    and (r.resource_scope=0 or
+        EXISTS(
+        select * from subject_resource_scope rs
+        left join sys_org o on rs.org_id=o.id_
+    where o.org_code=#{params.orgCode}
+    and rs.resource_id=r.id_))
+        <if test="params.supplierId!=null and params.supplierId!=''">
+            and r.supplier_id=#{params.supplierId}
+        </if>
+        <if test="params.isShow!=null and params.isShow!=''">
+            and r.is_show=#{params.isShow}
+        </if>
+         <if test="params.isbn!=null and params.isbn!=''">
+            and r.isbn like concat('%',#{params.isbn},'%')
+        </if>
+         <if test="params.author!=null and params.author!=''">
+             and r.author like concat('%',#{params.author},'%')
+        </if>
+        <if test="params.resourceName!=null and params.resourceName!=''">
+            and (
+            r.resource_Name like concat('%',#{params.resourceName},'%')
+            or
+            r.resource_code like concat('%',#{params.resourceName},'%')
+            )
+        </if>
+    and find_in_set(r.org_code,#{params.parentCodes})
+    GROUP BY r.id_
+    order by total_source desc
+
+
+
+    </select>
+    <select id="selectOrgResourceByMap" resultMap="zdResourceVOMap">
+
+        SELECT r.*,  IFNULL(order_t.order_num,0)-IFNULL(source_t.total_amount,0),IFNULL(source_t.total_amount,0)total_amount,
+        IFNULL(order_t.order_num,0) total_zd, 0 total_audit
+        FROM subject_resource r
+        LEFT JOIN
+        (SELECT IFNULL(SUM(zor.`order_num`),0) order_num,zor.resource_id  FROM
+        zd_order_resource zor
+        inner JOIN zd_order zo ON zo.id_=zor.order_id
+        WHERE 1=1  AND zo.from_org_code=#{params.orgCode} and zo.status='3'  and zo.semester_code=#{params.semesterCode}
+        GROUP BY zor.resource_id,zo.semester_code   )order_t
+        ON order_t.resource_id=r.id_
+        LEFT JOIN ( SELECT sr.resource_id,SUM(sr.source_num)total_amount FROM zd_source s inner JOIN zd_source_resource sr ON s.id_=sr.source_id
+        WHERE 1=1  AND s.source_type='2' AND s.to_org_code=#{params.orgCode} and s.semester_code=#{params.semesterCode}
+        GROUP BY sr.resource_id,s.semester_code )
+        source_t ON source_t.resource_id=r.id_
+        WHERE 1=1
+        and find_in_set(r.org_code,#{params.parentCodes})
+        <if test="params.supplierId!=null and params.supplierId!=''">
+            and r.supplier_id=#{params.supplierId}
+        </if>
+        <if test="params.resourceName!=null and params.resourceName!=''">
+            and (
+            r.resource_Name like concat('%',#{params.resourceName},'%')
+            or
+            r.resource_code like concat('%',#{params.resourceName},'%')
+            )
+        </if>
+        AND  IFNULL(order_t.order_num,0)-IFNULL(source_t.total_amount,0)>0
+
+        GROUP BY r.id_
+
+        ORDER BY  order_t.order_num DESC
+
+
+
+
+
+    </select>
+    <select id="selectByCode" resultMap="subjectResourceMap">
+        select r.* from subject_resource r where resource_code=#{resourceCode}
+    </select>
+
+    <select id="selectIncomePage" resultMap="zdSourceIncomeMap">
+
+        SELECT r.id_,r.resource_code,r.isbn,r.resource_name,r.price,r.resource_type,
+        IFNULL(SUM(sr.source_num),0)totalSource,
+        IFNULL(a.income_num,0)totalIncome,
+        if(SUM(IFNULL(sr.source_num,0)-IFNULL(a.income_num,0)-IFNULL(a.confirm_income_num,0))&lt;0,0,SUM(IFNULL(sr.source_num,0)-IFNULL(a.income_num,0)-IFNULL(a.confirm_income_num,0)))need_income_num,
+        IFNULL(a.confirm_income_num,0)confirm_income_num,
+        s.semester_code
+        FROM
+        zd_source_resource sr
+        LEFT JOIN
+        zd_source s ON sr.source_id=s.id_
+        LEFT JOIN subject_resource r ON sr.resource_id=r.id_
+        LEFT JOIN
+        (
+        SELECT SUM(if(zs.status='2',si.income_num,0))income_num,
+        SUM(if(zs.status='1',si.income_num,0))confirm_income_num,si.resource_id,zs.`semester_code`
+        FROM zd_stock_income zs
+        LEFT JOIN zd_stock_income_resource si ON si.income_id=zs.id_ WHERE
+        zs.org_code=#{params.orgCode}
+        GROUP BY si.resource_id,zs.`semester_code`,zs.org_code
+        ) a ON a.resource_id=r.id_ and a.semester_code=s.semester_code
+        WHERE 1=1 and  s.org_code=#{params.orgCode} and s.supplier_id=#{params.supplierId}
+        and
+        (r.org_code=#{params.orgCode} or  find_in_set(r.org_code,#{params.parentCodes}))
+        <if test="params.resourceName!=null and params.resourceName!=''">
+            and (
+            r.resource_Name like concat('%',#{params.resourceName},'%')
+            or
+            r.resource_code like concat('%',#{params.resourceName},'%')
+            )
+        </if>
+        GROUP BY r.id_,s.semester_code,s.org_code
+    </select>
+    <update id="updateByIds">
+        update subject_resource
+        set delete_flag=#{deleteFlag}
+        where id_ in
+        <foreach collection="ids" item="item" separator="," close=")" open="(">
+            #{item}
+        </foreach>
+    </update>
+    <update id="updateResourceType2">
+        update subject_resource
+        set resource_type2=#{resourceType2}
+        where resource_code in
+        <foreach collection="list" item="item" separator="," open="(" close=")">
+            #{item.resourceCode}
+        </foreach>
+    </update>
+
+    <resultMap type="io.renren.modules.zd.vo.ZdStockResourceVO" id="zdPubishVOMap" >
+        <result property="id" column="id_"/>
+        <result property="resourceCode" column="resource_code"/>
+        <result property="resourceName" column="resource_name"/>
+        <result property="resourceType" column="resource_type"/>
+        <result property="author" column="author"/>
+        <result property="resourceVersion" column="resource_version"/>
+        <result property="publishingName" column="publishing_Name"/>
+        <result property="price" column="price"/>
+        <result property="totalAmount" column="total_amount"/>
+        <result property="orderCount" column="order_count"/>
+        <result property="publishCount" column="publish_count"/>
+        <result property="preparePublishCount" column="prepare_Publish_Count"/>
+        <result property="refundSubmitNum" column="refund_submit_num"/>
+    </resultMap>
+    <select id="selectPublishResourcePage" resultMap="zdPubishVOMap">
+	SELECT a.resource_id,ifnull(s.total_amount,0)total_amount,IFNULL(a.order_count,0)order_count,
+	IFNULL(b.publish_count,0)publish_count,
+        (IFNULL(a.order_count,0)-IFNULL(b.publish_count,0))prepare_Publish_Count,
+        ifnull(refund.refund_submit_num,0)refund_submit_num,
+        r.resource_code,r.resource_type,r.resource_version,r.price
+	,r.resource_name,r.publishing_Name,r.author
+	 FROM (
+        SELECT (select id_ from subject_resource r where r.resource_code=zmcr.resource_code)resource_id,o.from_org_code,o.to_org_code,
+        SUM(zor.order_num)order_count FROM  zd_order_resource zor
+        LEFT JOIN zd_order o ON o.id_=zor.order_id
+        left join zd_major_course_resource zmcr on zmcr.id_=zor.zmcr_id
+
+        WHERE
+        o.semester_code=#{params.semesterCode}
+        AND o.status='3'
+        AND o.from_org_code=#{params.fromOrgCode}
+
+        GROUP BY o.from_org_code,o.to_org_code,zor.resource_id
+        ) a
+	LEFT JOIN
+
+        zd_stock s  ON s.resource_id=a.resource_id AND s.org_code=a.to_org_code
+	LEFT JOIN (
+	SELECT pr.resource_id,p.to_org_code,p.from_org_code,SUM(pr.publish_num)publish_count FROM zd_publish p
+	LEFT JOIN zd_publish_resource pr ON p.id_=pr.publish_id
+	     WHERE
+	     p.semester_code=#{params.semesterCode}
+	      AND (p.status='3' or p.status='4')
+	          AND p.to_org_code=#{params.fromOrgCode}
+		GROUP BY p.from_org_code,p.to_org_code,pr.resource_id
+        )
+		b ON b.resource_id=a.resource_id  AND a.to_org_code=b.from_org_code
+        LEFT JOIN
+        (
+        SELECT  zr.`to_org_code`,zr.from_org_code,rr.resource_id,
+        SUM(IF(zr.status='2' OR zr.status='1',rr.real_num,0))refund_submit_num,
+        SUM(IF(zr.status='3' OR zr.status='4',rr.real_num,0))refund_audit_num,zr.semester_code
+        FROM zd_refund_resource rr
+        LEFT JOIN zd_refund zr ON zr.id_=rr.`refund_id`
+        where 1=1 and  zr.semester_code=#{params.semesterCode}
+        <if test="params.toOrgCode != null and params.toOrgCode != ''">
+            AND zr.from_org_code = #{params.toOrgCode}
+        </if>
+        GROUP BY rr.`resource_id`,zr.`semester_code`, zr.`to_org_code`,zr.from_org_code
+        ) refund on refund.resource_id=a.resource_id and  a.to_org_code=refund.`from_org_code`
+
+        LEFT JOIN subject_resource r ON r.id_=a.resource_id OR r.old_resource_id=a.resource_id
+	WHERE a.to_org_code=#{params.toOrgCode}
+        <if test="params.resourceName!=null and params.resourceName!=''">
+            and (r.resource_code like concat('%',#{params.resourceName},'%') or
+            r.resource_Name like concat('%',#{params.resourceName},'%'))
+        </if>
+       and IFNULL(a.order_count,0)-IFNULL(b.publish_count,0)>0
+      order by
+        IF(((IFNULL(s.total_amount,0)-IFNULL(refund_submit_num,0))-(IFNULL(a.order_count,0)-IFNULL(b.publish_count,0))) &lt;=0,IFNULL(s.`total_amount`,0),(IFNULL(s.total_amount,0)-IFNULL(refund_submit_num,0))-(IFNULL(a.order_count,0)-IFNULL(b.publish_count,0))) DESC
+    </select>
+    <select id="selectStockResourcePage" resultMap="zdPubishVOMap">
+
+ SELECT s.*,
+	r.resource_code,r.resource_type,r.resource_version
+	,r.resource_name,r.publishing_Name,r.author,r.price,
+        ifnull(refund.refund_submit_num,0)refund_submit_num
+	 FROM zd_stock s
+	LEFT JOIN subject_resource r ON r.id_=s.resource_id OR r.old_resource_id=s.resource_id
+        LEFT JOIN
+        (
+        SELECT  zr.`to_org_code`,zr.from_org_code,rr.resource_id,
+        SUM(IF(zr.status='2' OR zr.status='1',rr.real_num,0))refund_submit_num,
+        SUM(IF(zr.status='3' OR zr.status='4',rr.real_num,0))refund_audit_num,zr.semester_code
+        FROM zd_refund_resource rr
+        LEFT JOIN zd_refund zr ON zr.id_=rr.`refund_id`
+        where 1=1 and  zr.semester_code=#{params.semesterCode}
+        <if test="params.toOrgCode != null and params.toOrgCode != ''">
+            AND zr.from_org_code = #{params.toOrgCode}
+        </if>
+        GROUP BY rr.`resource_id`,zr.`semester_code`, zr.`to_org_code`,zr.from_org_code
+        ) refund on refund.resource_id=s.resource_id and  s.org_code=refund.`from_org_code`
+	WHERE s.org_code=#{params.toOrgCode}
+	<if test="params.resourceName!=null and params.resourceName!=''">
+        and (r.resource_code like concat('%',#{params.resourceName},'%') or
+        r.resource_Name like concat('%',#{params.resourceName},'%'))
+    </if>
+    order by s.total_amount desc
+
+    </select>
+
+    <resultMap type="io.renren.modules.zd.vo.ZdRefundResourceVO" id="zdRefundVOMap" >
+        <result property="id" column="id_"/>
+        <result property="resourceCode" column="resource_code"/>
+        <result property="resourceName" column="resource_name"/>
+        <result property="resourceType" column="resource_type"/>
+        <result property="author" column="author"/>
+        <result property="resourceVersion" column="resource_version"/>
+        <result property="publishingName" column="publishing_Name"/>
+        <result property="price" column="price"/>
+        <result property="totalAmount" column="total_amount"/>
+        <result property="incomeNum" column="income_num"/>
+        <result property="refundAuditNum" column="refund_audit_num"/>
+        <result property="refundSubmitNum" column="refund_submit_num"/>
+        <result property="totalCat" column="total_cat"/>
+        <result property="totalIncome" column="total_income"/>
+        <result property="totalRefund" column="total_refund"/>
+    </resultMap>
+
+    <select id="selectRefundResourcePage" resultMap="zdRefundVOMap">
+
+
+        SELECT c.company_name,s.*,
+        r.resource_code,r.resource_type,r.resource_version
+        ,r.resource_name,r.publishing_Name,r.author,r.price,
+        IFNULL(z_is.total_income,0)total_income,
+        IFNULL(z_rs.total_refund,0)total_refund,
+        IFNULL(z_cat.total_cat,0)total_cat
+        FROM
+        zd_stock s
+        LEFT JOIN subject_resource r ON s.resource_id=r.id_
+        LEFT JOIN sys_company c ON c.id_=r.supplier_id
+        LEFT JOIN
+        (
+        SELECT si.org_code,SUM(sir.income_num)total_income,sir.resource_id
+         FROM zd_stock_income si
+        LEFT JOIN zd_stock_income_resource sir ON si.id_=sir.income_id
+        where 1=1 and si.semester_code=#{params.semesterCode}
+        <!--<if test="params.semesterCodeList!=null and params.semesterCodeList.size()>0">
+            AND si.semester_code IN
+            <foreach collection="params.semesterCodeList" item="item" separator="," close=")" open="(">
+                #{item}
+            </foreach>
+        </if>-->
+        GROUP BY si.org_code,sir.resource_id
+        )z_is  ON s.org_code=z_is.org_code AND z_is.resource_id=s.resource_id
+        LEFT JOIN
+        (SELECT rs.org_code,SUM(rrs.refund_num)total_refund,rrs.resource_id
+        FROM zd_refund_supplier rs
+        LEFT JOIN zd_refund_supplier_resource rrs ON rs.id_=rrs.refund_supplier_id
+        where 1=1 and rs.refund_semester_code=#{params.semesterCode}
+        <!--<if test="params.semesterCodeList!=null and params.semesterCodeList.size()>0">
+            AND rs.semester_code IN
+            <foreach collection="params.semesterCodeList" item="item" separator="," close=")" open="(">
+                #{item}
+            </foreach>
+        </if>-->
+        GROUP BY rs.org_code,rrs.resource_id
+
+        )z_rs ON s.org_code=z_rs.org_code AND s.resource_id=z_rs.resource_id
+        LEFT JOIN
+        (
+
+        SELECT rc.org_code,SUM(rc.cat_num)total_cat,rc.resource_id
+         FROM zd_refund_cart rc
+        where rc.refund_semester_code=#{params.semesterCode}
+        GROUP BY rc.org_code,rc.resource_id
+        )z_cat ON s.org_code=z_cat.org_code AND s.resource_id=z_cat.resource_id
+        WHERE s.org_code=#{params.toOrgCode}
+        <if test="params.supplierId!=null and params.supplierId!=''">
+            and r.supplier_Id=#{params.supplierId}
+        </if>
+        <if test="params.resourceName!=null and params.resourceName!=''">
+            and (r.resource_code like concat('%',#{params.resourceName},'%') or
+            r.resource_Name like concat('%',#{params.resourceName},'%'))
+        </if>
+        <if test="params.resourceType!=null and params.resourceType!=''">
+            and r.resource_type=#{params.resourceType}
+        </if>
+        ORDER BY s.total_amount DESC
+
+    </select>
+    <resultMap type="io.renren.modules.zd.vo.MajorCourseOrgVO" id="majorCourseVOMap" >
+
+        <result property="majorCode" column="major_code"/>
+        <result property="majorName" column="major_name"/>
+        <result property="courseCode" column="course_code"/>
+        <result property="courseName" column="course_name"/>
+        <result property="majorType" column="major_type"/>
+        <result property="subjectType" column="subject_type"/>
+        <result property="studentType" column="student_type"/>
+    </resultMap>
+    <select id="selectMajorCoursePage" resultMap="majorCourseVOMap">
+
+
+
+        SELECT m.major_code,c.course_code,om.student_type,om.major_type,m.major_name,
+        c.course_name,om.org_code,om.semester_code,om.subject_type,
+        (select org_name from sys_org o where o.org_code=om.org_code)org_name
+        FROM subject_resource r
+        left join zd_major_course_resource om on om.resource_code=r.resource_code
+         LEFT JOIN subject_course c ON c.course_code=om.course_code
+          LEFT JOIN subject_major_base m ON om.major_code=m.major_code
+         WHERE r.id_=#{params.resourceId}
+         AND m.major_code IS NOT NULL
+         <if test="'0'.toString()!=params.orgType">
+             AND (om.org_code=#{params.orgCode} OR  FIND_IN_SET(om.org_code,#{params.parentOrgCodes}))
+         </if>
+         order by om.semester_code desc
+
+    </select>
+    <select id="selectOrgResourceByMap1" resultMap="zdResourceVOMap">
+
+        SELECT r.*, IFNULL(SUM(zor.order_num),0)total_zd,GROUP_CONCAT(zor.id_)ids
+        FROM zd_order_resource zor
+        LEFT JOIN zd_order zo ON zo.id_=zor.order_id
+        LEFT JOIN zd_major_course_resource zmcr ON zmcr.id_=zor.zmcr_id
+        LEFT JOIN subject_resource r ON zmcr.resource_code=r.resource_code
+        WHERE 1=1  AND zo.from_org_code=#{params.orgCode}  AND zo.status='3'
+        AND zo.semester_code=#{params.semesterCode}
+        AND zmcr.resource_code IS NOT NULL
+        AND  NOT EXISTS(SELECT * FROM zd_source_order_resource zsor WHERE zsor.`order_resource_id`=zor.id_)
+        <if test="params.supplierId!=null and params.supplierId!=''">
+            and r.supplier_id=#{params.supplierId}
+        </if>
+        <if test="params.resourceName!=null and params.resourceName!=''">
+            and (
+            r.resource_Name like concat('%',#{params.resourceName},'%')
+            or
+            r.resource_code like concat('%',#{params.resourceName},'%')
+            )
+        </if>
+
+        GROUP BY r.id_
+        ORDER BY  SUM(zor.order_num) DESC
+    </select>
+    <select id="selectStockResourcePage1" resultMap="zdPubishVOMap">
+
+        SELECT s.*,
+        r.resource_code,r.resource_type,r.resource_version
+        ,r.resource_name,r.publishing_Name,r.author,r.price,
+        ifnull(refund.refund_submit_num,0)refund_submit_num
+        FROM zd_stock s
+        LEFT JOIN subject_resource r ON r.id_=s.resource_id OR r.old_resource_id=s.resource_id
+        LEFT JOIN
+        (
+        SELECT  zr.`to_org_code`,zr.from_org_code,rr.resource_id,
+        SUM(IF(zr.status='2' OR zr.status='1',rr.real_num,0))refund_submit_num,
+        SUM(IF(zr.status='3' OR zr.status='4',rr.real_num,0))refund_audit_num,zr.semester_code
+        FROM zd_refund_resource rr
+        LEFT JOIN zd_refund zr ON zr.id_=rr.`refund_id`
+        where 1=1 and  zr.semester_code=#{params.semesterCode}
+        <if test="params.toOrgCode != null and params.toOrgCode != ''">
+            AND zr.from_org_code = #{params.toOrgCode}
+        </if>
+        GROUP BY rr.`resource_id`,zr.`semester_code`, zr.`to_org_code`,zr.from_org_code
+        ) refund on refund.resource_id=s.resource_id and  s.org_code=refund.`from_org_code`
+        WHERE s.org_code=#{params.toOrgCode}
+        <if test="params.resourceName!=null and params.resourceName!=''">
+            and (r.resource_code like concat('%',#{params.resourceName},'%') or
+            r.resource_Name like concat('%',#{params.resourceName},'%'))
+        </if>
+        order by s.total_amount desc
+    </select>
+    <select id="selectPublishResourcePage1" resultMap="zdPubishVOMap">
+
+        SELECT a.resource_id,ifnull(s.total_amount,0)total_amount,IFNULL(a.order_count,0)order_count,
+        IFNULL(b.publish_count,0)publish_count,
+        (IFNULL(a.order_count,0)-IFNULL(b.publish_count,0))prepare_Publish_Count,
+        ifnull(refund.refund_submit_num,0)refund_submit_num,
+        r.resource_code,r.resource_type,r.resource_version,r.price
+        ,r.resource_name,r.publishing_Name,r.author
+        FROM (
+        SELECT r.id_ resource_id,o.from_org_code,o.to_org_code,SUM(zor.order_num)order_count
+        FROM  zd_order_resource zor
+        LEFT JOIN zd_order o ON o.id_=zor.order_id
+        inner join zd_major_course_resource om on om.id_=zor.zmcr_id
+        left join subject_resource r on r.resource_code=om.resource_code
+        WHERE o.semester_code=#{params.semesterCode} AND o.status='3' AND o.from_org_code=#{params.fromOrgCode}
+        GROUP BY o.from_org_code,o.to_org_code,r.id_
+        ) a
+        LEFT JOIN subject_resource r ON r.id_=a.resource_id OR r.old_resource_id=a.resource_id
+        LEFT JOIN zd_stock s  ON s.resource_id=r.id_ AND s.org_code=a.to_org_code
+        LEFT JOIN (
+        SELECT pr.resource_id,p.to_org_code,p.from_org_code,SUM(pr.publish_num)publish_count FROM zd_publish p
+        LEFT JOIN zd_publish_resource pr ON p.id_=pr.publish_id
+        WHERE
+        p.semester_code=#{params.semesterCode}
+        AND (p.status='3' or p.status='4')
+        AND p.to_org_code=#{params.fromOrgCode}
+        GROUP BY p.from_org_code,p.to_org_code,pr.resource_id
+        )
+        b ON b.resource_id=a.resource_id  AND a.to_org_code=b.from_org_code
+        LEFT JOIN
+        (
+        SELECT  zr.`to_org_code`,zr.from_org_code,rr.resource_id,
+        SUM(IF(zr.status='2' OR zr.status='1',rr.real_num,0))refund_submit_num,
+        SUM(IF(zr.status='3' OR zr.status='4',rr.real_num,0))refund_audit_num,zr.semester_code
+        FROM zd_refund_resource rr
+        LEFT JOIN zd_refund zr ON zr.id_=rr.`refund_id`
+        where 1=1 and  zr.semester_code=#{params.semesterCode}
+        <if test="params.toOrgCode != null and params.toOrgCode != ''">
+            AND zr.from_org_code = #{params.toOrgCode}
+        </if>
+        GROUP BY rr.`resource_id`,zr.`semester_code`, zr.`to_org_code`,zr.from_org_code
+        ) refund on refund.resource_id=a.resource_id and  a.to_org_code=refund.`from_org_code`
+
+        WHERE a.to_org_code=#{params.toOrgCode}
+        <if test="params.resourceName!=null and params.resourceName!=''">
+            and (r.resource_code like concat('%',#{params.resourceName},'%') or
+            r.resource_Name like concat('%',#{params.resourceName},'%'))
+        </if>
+        and IFNULL(a.order_count,0)-IFNULL(b.publish_count,0)>0
+        order by
+        IF(((IFNULL(s.total_amount,0)-IFNULL(refund_submit_num,0))-(IFNULL(a.order_count,0)-IFNULL(b.publish_count,0))) &lt;=0,IFNULL(s.`total_amount`,0),(IFNULL(s.total_amount,0)-IFNULL(refund_submit_num,0))-(IFNULL(a.order_count,0)-IFNULL(b.publish_count,0))) DESC
+
+
+    </select>
+    <select id="listCatalog" resultType="java.lang.String">
+
+        select catalog_id from subject_resource
+        where catalog_id is not null
+        group by catalog_id
+    </select>
+    <select id="countMap" resultType="java.lang.Integer">
+        select ifnull(count(0),0) from subject_resource_scope rs
+        left join sys_org o on o.id_=rs.org_id
+        where rs.resource_id=#{resourceId} and o.org_code=#{orgCode}
+    </select>
+</mapper>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="io.renren.modules.sys.dao.SysOrgRateDao">
+    <update id="replaceRate">
+        replace into sys_org_rate(id_,org_code,semester_code,rate1,rate2,rate3,create_by,create_time)
+        value(REPLACE(UUID(),'-',''),#{orgCode},#{semesterCode},#{rate1},#{rate2},#{rate3},#{createBy},#{createTime})
+    </update>
+
+    <select id="selectListPage" resultType="io.renren.modules.sys.entity.SysOrgRateEntity">
+        select * from sys_org_rate a
+        where 1=1
+        <if test="params.orgCode!=null and params.orgCode!=''">
+            and a.org_code=#{params.orgCode}
+        </if>
+    </select>
+</mapper>
